@@ -1,0 +1,18 @@
+weights:
+    legend:
+        corner_labels:
+            add: true
+            names:         # Labels for each corner: contact (C), universal (U), inheritance (I)
+                - C
+                - U
+                - I
+            font_size: 6
+
+        title:
+            add: true
+            font_size: 6
+
+    output:
+        width_subplot: 2
+        height_subplot: 2
+        n_columns: 5

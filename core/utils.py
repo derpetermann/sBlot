@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from matplotlib import colors
 from numpy.typing import NDArray
 from pathlib import Path
+
 from scipy.spatial import Delaunay, cKDTree
 from scipy.sparse import csr_matrix
 from shapely import polygonize, unary_union
@@ -488,3 +489,28 @@ def gabriel_graph_from_delaunay(
     is_gabriel_edge = (nearest_dist >= r) | np.isclose(nearest_dist, r)
 
     return delaunay_connections[is_gabriel_edge]
+
+
+def fix_relative_path(path: str | Path, base_directory: str | Path) -> Path:
+    """Resolve a path relative to a base directory if not already absolute.
+
+    Args:
+        path: The original path, either absolute or relative.
+        base_directory: The directory to resolve relative paths against,
+                        typically the config file's parent directory.
+    Returns:
+        Absolute Path object.
+    """
+    path = Path(path)
+    return path if path.is_absolute() else base_directory / path
+
+
+def decompose_config_path(config_path: Path | str) -> (Path, Path):
+    """Extract the base directory of `config_path` and return the path itself as an
+    absolute path."""
+    abs_config_path = Path(config_path).absolute()
+    base_directory = abs_config_path.parent
+    return base_directory, abs_config_path
+
+
+

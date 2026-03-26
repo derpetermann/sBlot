@@ -1,65 +1,9 @@
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
-import tkinter as tk
-from tkinter import filedialog
-from numpy.typing import NDArray
 from scipy.optimize import linear_sum_assignment
 
 from sblot.results import Results
-from sblot.util import parse_cluster_columns, format_cluster_columns
-
-
-def load_clusters(filename=None) -> NDArray[int]:  # shape: (n_samples, n_clusters, n_objects)
-    if filename is None:
-        tk.Tk().withdraw()
-        filename = filedialog.askopenfilename(title='Select clusters file.', initialdir='../experiments/',
-                                              filetypes=(('txt', '*.txt'),('all', '*.*')))
-        print('Loading aras from selected file at:', filename)
-
-    with open(filename, 'r') as clusters_file:
-        clusters = []
-        for line in clusters_file:
-            clusters.append(parse_cluster_columns(line.strip()))
-
-    return np.array(clusters, dtype=int)
-
-
-def write_clusters(filename, cluster_samples):
-    with open(filename, 'w') as clusters_file:
-        clusters_file.writelines(
-            format_cluster_columns(sample) + "\n" for sample in cluster_samples
-        )
-
-
-def cluster_agreement(a1, a2):
-    return np.matmul(a1, a2.T)
-
-
-def get_permuted_params(results: Results, permutation: list) -> pd.DataFrame:
-    params: pd.DataFrame = results.parameters
-    cluster_names = np.array(results.cluster_names)
-    remap = {}
-    for clust_i, clust_j in zip(cluster_names, cluster_names[perm]):
-        # Fix areal effects columns
-        prefix_i = f"areal_{clust_i}_"
-        prefix_j = f"areal_{clust_j}_"
-        for k in params.columns:
-            if k.startswith(prefix_i):
-
-                k_j = prefix_j + k[len(prefix_i):]
-                remap[k] = params[k_j]
-
-    for i, j in enumerate(perm):
-        # Fix cluster size columns
-        remap[f"size_a{i}"] = params[f"size_a{j}"]
-
-    for k_old, params_k_new in remap.items():
-        params[k_old] = params_k_new
-
-    return params
-
 
 if __name__ == '__main__':
     from shutil import copyfile
