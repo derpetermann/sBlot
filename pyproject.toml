@@ -3,15 +3,17 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "sBlot"
-version = "1.0"
+name = "sblot"
+version = "1.0.0"
 description = "Python library for visualization of sBayes results."
+readme = "README.md"
+requires-python = ">=3.10"
 authors = [
-    {name = "Anjing Zhang"},
     {name = "Nico Neureiter", email = "nico.neureiter@gmail.com"},
-    {name = "Peter Ranacher"},
+    {name = "Peter Ranacher", email = "peter.ranacher@gmail.com"},
+    {name = "Anjing Zhang"},
 ]
-keywords = ["data", "linguistics"]
+keywords = ["clustering", "confounders", "language areas", "contact tracing"]
 license = {text = "GPLv3"}
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -19,42 +21,49 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "descartes",
+    "antimeridian",
     "geopandas",
     "matplotlib",
     "numpy",
     "pandas",
+    "pydantic>=2",
     "pyproj",
+    "ruamel.yaml",
+    "sbayes",
     "scipy",
     "seaborn",
-    "setuptools",
-    "cartopy",
+    "shapely",
     "typing_extensions",
-    "pydantic",
-    "ruamel.yaml",
-    "rasterio",
-    "webcolors",
-    "dash",
-    "jupyter_dash",
-    "plotly",
     "Unidecode",
-    "gunicorn",
+    "webcolors",
+]
+
+[project.optional-dependencies]
+interactive = [
+    "dash",
     "dash-extensions",
     "dash-daq",
+    "plotly",
+]
+loo = [
+    "arviz",
+    "tables",
+]
+all = [
+    "sblot[interactive,loo]",
 ]
 
 [project.urls]
 Homepage = "https://github.com/maeva-jing/sBlot"
 
 [project.scripts]
-sblot = "sblot.plot:cli"
-sbayes_dash = "sbayes_dash.run:cli"
+sblot = "sblot.run:cli"
+sblot-interactive = "sblot.interactive.app:cli"
 
 [tool.setuptools.packages.find]
 where = ["."]
 exclude = ["build", "test*"]
 
 [tool.setuptools.package-data]
-"sblot.config" = ["default_config_plot.json"]
-"sblot.maps" = ["*.geojson"]
-
+"sblot.data.maps" = ["*.geojson"]
+"sblot.data.example_configs" = ["*.yaml"]

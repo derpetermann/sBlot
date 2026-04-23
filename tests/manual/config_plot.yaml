@@ -1,0 +1,48 @@
+data:
+  # Path to the features CSV file
+  features: data/features.csv
+  # Path to the feature types.yaml file (defines the feature type for each feature)
+  feature_types: data/feature_types.yaml
+  # The coordinate reference system of the input data (PROJ string or EPSG code)
+  # This may differ from map_projection in config.yaml
+  projection: "epsg:4326"
+
+results:
+  # Path to the results files (clusters and stats) from a sBayes run
+  path_in: results/uralic-test
+  # Path to the directory where plots will be saved
+  path_out: null
+  # Fraction of samples to discard as burn-in (0.0 to 1.0)
+  burn_in: 0.2
+  # Keep every nth sample to reduce memory usage (1 = keep all samples)
+  thinning: 1
+
+plots:
+  weights:
+    features: ["GB020", "GB021"]
+  preferences:
+    features: [ "GB020", "GB021"]  # Null or empty = plot all features
+    components:            # Null or empty = plot all components, "clusters" = plot cluster effects only, or provide a list of confounder names and groups e.g. "family"
+      - component: universal
+      - component: family
+        groups:            # Null or empty = plot all groups within the component, or provide a specific group name e.g. "Turkic", "a_0"
+          - Turkic
+    reference:
+      universal   # None or empty = no reference overlay, or provide a confounder name with one group that applies to all objects, e.g. "universal"
+  pies:
+    enabled: true
+  loo:
+    enabled: true
+  map:
+    type: idw                   # pie | line | idw
+    plot_confounder: family
+    labels: all                 # all | in_cluster | none
+    min_posterior_probability: 0.6
+    per_cluster: true          # produces one map per cluster rather than all clusters in one map
+    line:
+      graph: "delaunay"        # complete | delaunay | gabriel
+    idw:
+      resolution: 50000      # grid cell size in map CRS units
+      power: 2
+      background_weight:  1.0 # weight of background color
+

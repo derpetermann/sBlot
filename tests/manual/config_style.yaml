@@ -1,0 +1,180 @@
+global:
+  format: "png"
+  resolution: 300
+  cluster_colors:
+    - "red"
+    - "green"
+
+weights:
+  simplex:
+    color: "#005570"
+    border_width: 0.2
+    padding: 0.1
+    label_stretch: 1.15
+  mean:
+    show: true
+    color: "#ed1696"
+    size: 10
+    marker: o
+  legend:
+    title:
+      add: true
+      font_size: 6
+      position:
+        x: 0
+        y: 1
+    corner_labels:
+      add: true
+      font_size: 6
+  output:
+    width_subplot: 2
+    height_subplot: 2
+    n_columns: 5
+    spacing_horizontal: 0.1
+    spacing_vertical: 0.1
+
+preferences:
+  color: "#005570"
+  reference_color: "#b0b0b0"
+  legend:
+    labels:
+      add: true
+      font_size: 4
+    title:
+      add: true
+      font_size: 6
+      position:
+        x: 0
+        y: 1
+  output:
+    width_subplot: 3
+    height_subplot: 3
+    n_columns: 5
+    spacing_horizontal: 0.2
+    spacing_vertical: 0.3
+
+pies:
+  label:
+    index_size: 15
+    name_size: 15
+    max_label_length: 10    # threshold for breaking long labels
+  pie:
+    radius: 15              # pie chart radius
+    no_cluster_color: lightgrey   # The color for objects not in any cluster
+  axes:
+    x_min: 0
+    x_max: 160
+    y_min: -10
+    y_max: 10
+    index_x: 0.20          # x position of index label
+    name_x: 0.25           # x position of name label
+    label_y: 0.5           # y position of both labels
+  output:
+    width: 4
+    height: 2
+    spacing_horizontal: 0.01
+    spacing_vertical: 0.01
+
+loo:
+  box_color: "#005570"
+  line_width: 0.5
+  line_style: "dashed"
+  output:
+    width: 14
+    height: 10
+
+map:
+  geo:
+    # The coordinate reference system of the base map. Defaults to the data projection if not set.
+    map_projection: "+proj=laea +lon_0=42.890625 +lat_0=65.4378522 +datum=WGS84 +units=m +no_defs"
+    extent:               # Map extent. Defaults to the data extent if not set
+      x_min: null
+      x_max: null
+      y_min: null
+      y_max: null
+    basemap:
+      add: true
+      polygon: "<DEFAULT>"    # uses package default
+      line: "<DEFAULT>"       # uses package default
+      point: null             # no points by default
+  graphics:
+    objects:
+      color: "#000000"
+      marker: o
+      size: 5
+      label: true
+      font_size: 5
+    clusters:
+      marker: o
+      color: max_cluster       # "max_cluster" or "as_objects"
+      size: frequency          # "frequency" or fixed float, e.g., 10
+      max_size: 50             # maximum size when size is "frequency"
+      line_width: frequency    # "frequency" or fixed float, e.g., 1.0
+      max_line_width: 1        # maximum width when line_width is "frequency"
+      alpha: frequency         # "frequency" or fixed float, e.g., 0.8
+      pie_radius_factor: 0.008
+    confounders:
+      size: 180
+      color:
+        - "#b3e2cd"
+        - "#f1e2cc"
+        - "#cbd5e8"
+      buffer: 0.5
+      shape: 20
+    basemap:
+      background: "#f0f8ff"
+      polygon:
+        color: white
+        outline_color: grey
+        outline_width: 0.1
+      line:
+        color: skyblue
+        width: 0.5
+      point:
+        color: black
+        size: 10
+        marker: o
+  legend:
+    clusters:
+      add: true
+      log_likelihood: false
+      font_size: 10
+      position:
+        x: 0.005
+        y: 0.95
+    confounders:
+      add: true
+      font_size: 10
+      position:
+        x: 0.005
+        y: 0.8
+    lines:
+      add: true
+      font_size: 10
+      position:
+        x: 0.005
+        y: 0.5
+      reference_frequencies:
+        - 0.5
+        - 0.7
+        - 0.9
+    overview_map:
+      add: false
+      extent_factor:
+        x: 1.5    # the extent is 1.5x wider than that of the main map
+        y: 1.5
+      width: 0.3  # overview window is 20% of the main image
+      height: 0.3
+      position:
+        x: 0.005
+        y: 0.15
+    index_table:
+      add: true
+      show: "all"
+      font_size: 10
+      n_columns: 2
+      color_labels: true
+      height: 0.8
+  output:
+    width: 14
+    height: 10
