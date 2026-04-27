@@ -34,6 +34,7 @@ def plot_pies(
     n_objects = clusters.shape[2]
     n_samples = clusters.shape[1]
 
+    print(clusters.shape, "Shape clusters")
     # Sum cluster assignments over samples — shape: (n_clusters, n_objects)
     samples_per_cluster = np.sum(clusters, axis=1)
 

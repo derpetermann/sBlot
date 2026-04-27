@@ -14,17 +14,20 @@ from matplotlib.transforms import Bbox
 
 from matplotlib.patches import Patch, Rectangle, Wedge
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+from numba.core.types import Literal
 from numpy.typing import NDArray
 from sbayes.results import Results
 from sbayes.load_data import Data, Objects
 from sblot.config.config_io import Config
 from sblot.core.render import style_axes, make_likelihood_legend, annotate_label
 from sblot.core.utils import (reproject_locations, compute_extent, Extent,
-                              get_cluster_colors, lighten_color, compute_alpha_shape, compute_idw_grid)
+                              get_cluster_colors, lighten_color, compute_alpha_shape, compute_idw_grid,
+                              to_folder_name)
 from sblot.core.transforms import get_cluster_probability, clusters_to_graph
 from shapely import BufferCapStyle, BufferJoinStyle, unary_union, Point
 from shapely.geometry import Polygon, box
 from shapely.plotting import plot_polygon
+from typing import Literal
 
 
 def add_basemap_polygon(
@@ -192,14 +195,14 @@ def visualise_basemap(
 
 
 def get_cluster_graph(
-    results: Results,
+    clusters: NDArray[bool],
     locations_map_crs: NDArray[float],
     config: Config,
 ) -> list[tuple[NDArray[bool], NDArray[float], NDArray[float]]]:
     """Compute graphs for all clusters.
 
     Args:
-        results: MCMC results containing cluster samples.
+        clusters: Cluster samples.
         locations_map_crs: Object locations in map CRS.
         config: Combined plot and style configuration.
     Returns:
@@ -208,12 +211,12 @@ def get_cluster_graph(
     experiment = config.experiment.plots.map
     return [
         clusters_to_graph(
-            np.asarray(cluster),
+            np.asarray(c),
             locations_map_crs,
             experiment.line.graph,
             experiment.min_posterior_probability,
         )
-        for cluster in results.clusters
+        for c in clusters
     ]
 
 
@@ -262,7 +265,7 @@ def draw_cluster_lines(
 
 
 def render_cluster_connection(
-    results: Results,
+    clusters: NDArray[bool],
     locations_map_crs: NDArray[float],
     cluster_colors: list[str],
     objects: Objects,
@@ -272,7 +275,7 @@ def render_cluster_connection(
     """Draw cluster connection lines and return legend handles.
 
     Args:
-        results: MCMC results containing cluster samples.
+        clusters: Cluster samples.
         locations_map_crs: Object locations in map CRS.
         cluster_colors: Colors for each cluster.
         objects: Objects container with indices.
@@ -281,21 +284,21 @@ def render_cluster_connection(
     Returns:
         Tuple of (cluster_labels, legend_handles)"""
 
-    graphs = get_cluster_graph(results, locations_map_crs, config)
+    graphs = get_cluster_graph(clusters, locations_map_crs, config)
     legend_handles = draw_cluster_lines(graphs, cluster_colors, config, ax)
     cluster_labels = [list(compress(objects.indices, in_cluster)) for in_cluster, _, _ in graphs]
     return cluster_labels, legend_handles
 
 
 def get_dominant_cluster(
-    results: Results,
+    clusters: NDArray[bool],
     config: Config,
 ) -> NDArray[bool]:
     """For each object, find the cluster with the highest posterior assignment
     probability and determine whether it exceeds the minimum threshold.
 
     Args:
-        results: MCMC results containing cluster samples.
+        clusters: Cluster samples.
         config: Combined plot and style configuration.
     Returns:
         Boolean mask — True if max_prob exceeds
@@ -305,7 +308,7 @@ def get_dominant_cluster(
 
     # Compute posterior assignment probability per cluster
     # shape: (n_clusters, n_objects)
-    cluster_assignment_prob = np.array([get_cluster_probability(c) for c in results.clusters])
+    cluster_assignment_prob = np.array([get_cluster_probability(c) for c in clusters])
 
     # Find the dominant cluster and its color
     dominant_cluster_idx = np.argmax(cluster_assignment_prob, axis=0)
@@ -719,6 +722,7 @@ def render_line_map(
     locations_map_crs: NDArray[float],
     config: Config,
     ax: plt.Axes,
+    single_cluster_id: int | None = None,
 ) -> tuple[list[list[int]], list[str]]:
     """Render a line map showing posterior cluster frequencies.
 
@@ -732,6 +736,8 @@ def render_line_map(
         locations_map_crs: Object locations in map CRS, shape (n_objects, 2).
         config: Combined plot and style configuration.
         ax: Matplotlib axis to draw on.
+        single_cluster_id: ID of a single cluster. If provided, plot a single cluster instead of all clusters. Defaults to None.
+
     Returns:
         Tuple of (cluster_labels, cluster_colors) where cluster_labels is
         a list of site index lists per cluster and cluster_colors is a list
@@ -747,10 +753,16 @@ def render_line_map(
         custom_colors=global_.cluster_colors or None,
     )
 
-    # Get per-object cluster with max posterior assignment probability and its color
-    in_cluster = get_dominant_cluster(results, config)
+    if single_cluster_id is not None:
+        clusters = results.clusters[single_cluster_id:single_cluster_id + 1]
+        cluster_colors = cluster_colors[single_cluster_id:single_cluster_id + 1]
+    else:
+        clusters = results.clusters
 
-    cluster_prob_matrix = np.array([get_cluster_probability(c) for c in results.clusters])
+    # Get per-object cluster with max posterior assignment probability and its color
+    in_cluster = get_dominant_cluster(clusters, config)
+
+    cluster_prob_matrix = np.array([get_cluster_probability(c) for c in clusters])
     max_cluster_prob = cluster_prob_matrix[in_cluster]
 
     in_any_cluster = np.any(in_cluster, axis=0)
@@ -769,16 +781,19 @@ def render_line_map(
 
     # Draw cluster connection lines and collect labels
     cluster_labels, legend_handles = render_cluster_connection(
-        results, locations_map_crs, cluster_colors, objects, config, ax
+        clusters, locations_map_crs, cluster_colors, objects, config, ax
     )
 
     # Build legend labels
-    if legend.clusters.log_likelihood:
+    if legend.clusters.log_likelihood and single_cluster_id is None:
         legend_labels, legend_handles = make_likelihood_legend(
             results.likelihood_single_clusters
         )
     else:
-        legend_labels = [f'$Z_{{{i + 1}}}$' for i in range(n_clusters)]
+        if single_cluster_id is not None:
+            legend_labels =  [f'$Z_{{{single_cluster_id + 1}}}$']
+        else:
+            legend_labels = [f'$Z_{{{i + 1}}}$' for i in range(n_clusters)]
 
     add_cluster_legend(
         legend_handles, legend_labels, config, ax
@@ -793,6 +808,7 @@ def render_pie_map(
     locations_map_crs: NDArray[float],
     config: Config,
     ax: plt.Axes,
+    single_cluster_id: int | None = None,
 ) -> tuple[list[list[int]] | None, list[str]]:
     """Render a map with pie charts at each site showing cluster membership.
 
@@ -802,6 +818,8 @@ def render_pie_map(
         locations_map_crs: Site locations in map CRS, shape (n_sites, 2).
         config: Combined plot and style configuration.
         ax: Matplotlib axis to draw on.
+        single_cluster_id: ID of a single cluster. If provided, plot a single cluster instead of all clusters. Defaults to None.
+
     Returns:
         Tuple of (cluster_labels | None, cluster_colors).
     """
@@ -814,8 +832,14 @@ def render_pie_map(
         custom_colors=config.style.global_.cluster_colors or None,
     )
 
-    in_cluster = get_dominant_cluster(results, config)
-    cluster_prob_matrix = np.array([get_cluster_probability(c) for c in results.clusters])
+    if single_cluster_id is not None:
+        clusters = results.clusters[single_cluster_id:single_cluster_id + 1]
+        cluster_colors = cluster_colors[single_cluster_id:single_cluster_id + 1]
+    else:
+        clusters = results.clusters
+
+    in_cluster = get_dominant_cluster(clusters, config)
+    cluster_prob_matrix = np.array([get_cluster_probability(c) for c in clusters])
     objects_in_cluster_indices = np.where(np.any(in_cluster, axis=0))[0]
 
     # Compute fixed pie radius in data units
@@ -859,8 +883,10 @@ def render_pie_map(
                    markerfacecolor='lightgrey', markeredgecolor='black',
                    markeredgewidth=0.5, markersize=10)
         ]
-
-        legend_labels = [f'$Z_{{{i + 1}}}$' for i in range(n_clusters)] + ['no cluster']
+        if single_cluster_id is not None:
+            legend_labels = [f'$Z_{{{single_cluster_id + 1}}}$'] + ['other or no cluster']
+        else:
+            legend_labels = [f'$Z_{{{i + 1}}}$' for i in range(n_clusters)] + ['no cluster']
         add_cluster_legend(legend_handles, legend_labels, config, ax)
 
     # Get cluster labels
@@ -876,6 +902,8 @@ def render_idw_map(
     extent: Extent,
     config: Config,
     ax: plt.Axes,
+    single_cluster_id: int | None = None,
+
 ) -> tuple[list[list[int]], list[str]]:
     """Render IDW interpolation map.
 
@@ -890,6 +918,8 @@ def render_idw_map(
         extent: Spatial extent of the map.
         config: Combined plot and style configuration.
         ax: Matplotlib axis to draw on.
+        single_cluster_id: ID of a single cluster. If provided, plot a single cluster instead of all clusters. Defaults to None.
+
     Returns:
         Tuple of (cluster_labels, cluster_colors).
     """
@@ -912,7 +942,13 @@ def render_idw_map(
         n_clusters=n_clusters,
         custom_colors=config.style.global_.cluster_colors or None,
     )
-    in_cluster = get_dominant_cluster(results, config)
+    if single_cluster_id is not None:
+        clusters = results.clusters[single_cluster_id:single_cluster_id + 1]
+        cluster_colors = cluster_colors[single_cluster_id:single_cluster_id + 1]
+    else:
+        clusters = results.clusters
+
+    in_cluster = get_dominant_cluster(clusters, config)
     in_any_cluster = np.any(in_cluster, axis=0)
 
     # Use the dominant cluster or if below threshold use white
@@ -975,8 +1011,10 @@ def render_idw_map(
                                     markerfacecolor='white', markeredgecolor='black',
                                     markeredgewidth=0.5, markersize=10)
                          ]
-
-        legend_labels = [f'$Z_{{{i + 1}}}$' for i in range(n_clusters)] + ['no cluster']
+        if single_cluster_id is not None:
+            legend_labels = [f'$Z_{{{single_cluster_id + 1}}}$'] + ['other or no cluster']
+        else:
+            legend_labels = [f'$Z_{{{i + 1}}}$' for i in range(n_clusters)] + ['no cluster']
         add_cluster_legend(legend_handles, legend_labels, config, ax)
 
     # Cluster labels
@@ -989,7 +1027,9 @@ def plot_map(
     results: Results,
     data: Data,
     config: Config,
-    name_token: str | None = None,
+    model: str | None = None,
+    map_type: Literal['pie', 'line', 'idw'] = 'line',
+    single_cluster_id: None | int = None
 ) -> None:
     """Plot the posterior map.
 
@@ -999,14 +1039,14 @@ def plot_map(
         results: MCMC results containing cluster samples.
         data: Objects, features and confounders for the experiment.
         config: Combined plot and style configuration.
-        name_token: Optional token appended to the output filename to
-                    distinguish between different runs or clusters.
+        model: sBayes model name, e.g., K1 (optional).
+        map_type: Type of map to create, either 'pie', 'line' or 'idw'.
+        single_cluster_id: ID of a single cluster. If provided, plot a single cluster instead of all clusters. Defaults to None.
     """
     objects, features, confounders = data
     experiment = config.experiment
     style = config.style.map
     global_ = config.style.global_
-    plot_type = experiment.plots.map.type
 
     # Close any open figures
     plt.close('all')
@@ -1037,24 +1077,24 @@ def plot_map(
     style_axes(extent, ax)
 
     # Render map type
-    if plot_type == "pie":
+    if map_type == "pie":
         visualise_basemap(extent, config, ax)
         cluster_labels, cluster_colors = render_pie_map(
-            results, objects, locations_map_crs, config, ax
+            results, objects, locations_map_crs, config, ax, single_cluster_id
         )
 
-    elif plot_type == "line":
+    elif map_type == "line":
         visualise_basemap(extent, config, ax)
         cluster_labels, cluster_colors = render_line_map(
-            results, objects, locations_map_crs, config, ax
+            results, objects, locations_map_crs, config, ax, single_cluster_id
         )
 
-    elif plot_type == "idw":
+    elif map_type == "idw":
         cluster_labels, cluster_colors = render_idw_map(
-            results, objects, locations_map_crs, extent, config, ax
+            results, objects, locations_map_crs, extent, config, ax, single_cluster_id
         )
     else:
-        raise ValueError(f"Unknown map type: {experiment.plots.map.type}")
+        raise ValueError(f"Unknown map type: {map_type}")
 
     # Add language labels
     if experiment.plots.map.labels in ('all', 'in_cluster'):
@@ -1084,9 +1124,17 @@ def plot_map(
         add_index_table(objects, cluster_labels, cluster_colors,
                         config, ax)
 
-    map_name = f'{plot_type}_map' if name_token is None else f'{plot_type}_map_{name_token}'
+    if single_cluster_id is not None:
+        map_name = f'{map_type}_map_Z{single_cluster_id+1}'
+    else:
+        map_name = f'{map_type}_map'
+
     # Save
-    path_out = experiment.results.path_out / 'map'
+    if model is not None:
+        path_out = config.experiment.results.path_out / to_folder_name(model) / 'map'
+    else:
+        path_out = config.experiment.results.path_out / 'map'
+
     path_out.mkdir(parents=True, exist_ok=True)
     fig.savefig(
         path_out / f'{map_name}.{global_.format}',
@@ -1094,6 +1142,7 @@ def plot_map(
         dpi=global_.resolution,
         format=global_.format,
     )
+
     plt.close(fig)
 
 
@@ -1101,6 +1150,7 @@ def plot_maps(
     results: Results,
     data: Data,
     config: Config,
+    model: str | None = None
 ):
     """Wrapper function for plot_map. Iterates over map types and optionally over clusters.
 
@@ -1108,17 +1158,14 @@ def plot_maps(
         results: MCMC results containing cluster samples.
         data: Objects, features and confounders for the experiment.
         config: Combined plot and style configuration.
+        model: sBayes model name, e.g., K1 (optional).
     """
     map_config = config.experiment.plots.map
     map_types = map_config.type if isinstance(map_config.type, list) else [map_config.type]
 
     for map_type in map_types:
-        map_config.type = map_type
         if map_config.per_cluster:
-            all_clusters = results.clusters
             for cluster_idx in range(results.n_clusters):
-                results.clusters = all_clusters[cluster_idx:cluster_idx + 1]
-                plot_map(results, data, config, f"cluster{cluster_idx + 1}")
-            results.clusters = all_clusters
+                plot_map(results, data, config, model, map_type, cluster_idx)
         else:
-            plot_map(results, data, config)
+            plot_map(results, data, config, model, map_type)

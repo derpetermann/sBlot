@@ -102,6 +102,7 @@ def align_posterior(
     """
     print("Aligning posterior samples across runs...")
 
+
     # Load all runs without burn-in for alignment
     all_results = [
         Results.from_csv_files(c, s, burn_in=0)
