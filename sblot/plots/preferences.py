@@ -150,7 +150,8 @@ def plot_preferences_simplex(
 def plot_preferences(
     results: Results,
     config: Config,
-    model: str | None = None
+    model: str | None = None,
+    verbose: bool = True
 ) -> None:
     """Plot preference distributions for all components in a grid.
 
@@ -161,7 +162,11 @@ def plot_preferences(
         results: MCMC results containing preference samples.
         config: Combined plot and style configuration.
         model: sBayes model name, e.g., K1 (optional).
+        verbose: If True, print a progress message. Default is True.
     """
+    if verbose:
+        print("Plotting preferences...")
+
     experiment = config.experiment.plots.preferences
     style = config.style.preferences
     global_style = config.style.global_
@@ -250,7 +255,8 @@ def plot_preferences(
                 config=config,
                 reference_samples=ref,
             )
-            print(f"{component}: {position + 1} of {n_plots} plots finished")
+            if verbose:
+                print(f"{component}: {position + 1} of {n_plots} plots finished")
 
         plt.subplots_adjust(
             wspace=style.output.spacing_horizontal,

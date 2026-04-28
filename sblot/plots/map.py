@@ -1150,7 +1150,8 @@ def plot_maps(
     results: Results,
     data: Data,
     config: Config,
-    model: str | None = None
+    model: str | None = None,
+    verbose: bool = True
 ):
     """Wrapper function for plot_map. Iterates over map types and optionally over clusters.
 
@@ -1159,6 +1160,7 @@ def plot_maps(
         data: Objects, features and confounders for the experiment.
         config: Combined plot and style configuration.
         model: sBayes model name, e.g., K1 (optional).
+        verbose: If True, print progress messages. Defaults to True.
     """
     map_config = config.experiment.plots.map
     map_types = map_config.type if isinstance(map_config.type, list) else [map_config.type]
@@ -1166,6 +1168,9 @@ def plot_maps(
     for map_type in map_types:
         if map_config.per_cluster:
             for cluster_idx in range(results.n_clusters):
+                if verbose:
+                    print(f"Plotting {map_type} map for cluster {cluster_idx + 1}...")
                 plot_map(results, data, config, model, map_type, cluster_idx)
         else:
+            print(f"Plotting {map_type} map...")
             plot_map(results, data, config, model, map_type)

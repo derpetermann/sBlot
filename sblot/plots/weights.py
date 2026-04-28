@@ -135,7 +135,8 @@ def plot_weights_simplex(
 def plot_weights(
     results: Results,
     config: Config,
-    model: str | None = None
+    model: str | None = None,
+    verbose: bool = True
 ) -> None:
     """Plot all weight simplices arranged in a grid and save to file.
 
@@ -146,7 +147,11 @@ def plot_weights(
         results: MCMC results containing weight samples for each feature.
         config: Combined plot and style configuration.
         model: sBayes model name, e.g., K1 (optional).
+        verbose: If True, print a progress message. Default is True.
     """
+    if verbose:
+        print("Plotting weights...")
+
     experiment = config.experiment.plots.weights
     style = config.style.weights
     global_style = config.style.global_
@@ -188,7 +193,8 @@ def plot_weights(
             labels=labels,
             mean_weights=True,
         )
-        print(f"{position + 1} of {n_plots} plots finished")
+        if verbose:
+            print(f"{position + 1} of {n_plots} plots finished")
 
     plt.subplots_adjust(
         wspace=style.output.spacing_horizontal,

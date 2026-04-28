@@ -12,7 +12,8 @@ def plot_pies(
     results: Results,
     data: Data,
     config: Config,
-    model: str | None = None
+    model: str | None = None,
+    verbose: bool = True
 ) -> None:
     """Plot cluster membership as pie charts, one per object.
 
@@ -24,7 +25,10 @@ def plot_pies(
         data: Tuple of (objects, features, confounders).
         config: Combined plot and style configuration.
         model: sBayes model name, e.g., K1 (optional).
+        verbose: If true, print a progress message. Default is True.
     """
+    if verbose:
+        print("Plotting pies...")
     objects, features, confounders = data
     style = config.style.pies
     global_style = config.style.global_
@@ -34,7 +38,6 @@ def plot_pies(
     n_objects = clusters.shape[2]
     n_samples = clusters.shape[1]
 
-    print(clusters.shape, "Shape clusters")
     # Sum cluster assignments over samples — shape: (n_clusters, n_objects)
     samples_per_cluster = np.sum(clusters, axis=1)
 

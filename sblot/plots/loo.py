@@ -5,7 +5,9 @@ import seaborn as sns
 
 from sblot.config.config_io import Config, ModelResults
 
-def plot_loo(all_models: list[ModelResults], config: Config) -> None:
+def plot_loo(all_models: list[ModelResults],
+             config: Config,
+             verbose: bool = True) -> None:
     """""Plot PSIS-LOO model comparison across experiments and clusters with different k.
 
     For a single k value, generates a box plot comparing experiments.
@@ -14,7 +16,10 @@ def plot_loo(all_models: list[ModelResults], config: Config) -> None:
     Args:
         all_models: list of ModelResults containing the likelihoods.
         config: Combined plot and style configuration.
+        verbose: If True, print a progress message. Default is True.
     """
+    if verbose:
+        print("Plotting PSIS-LOO model comparison...")
     style = config.style.loo
     global_ = config.style.global_
 
