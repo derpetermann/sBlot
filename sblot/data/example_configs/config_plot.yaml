@@ -1,48 +1,101 @@
+# ============================================================
+# sBlot configuration file
+# Run `sblot --init` to generate this file with default values
+# ============================================================
+
+# ------------------------------------------------------------
+# Data settings
+# Defines where to find the input data for the sBayes analysis
+# ------------------------------------------------------------
 data:
-  # Path to the features CSV file
+  # Path to the features CSV file (columns: id, x, y, confounder_1, ..., feature_1, ...)
   features: data/features.csv
-  # Path to the feature types.yaml file (defines the feature type for each feature)
+  # Path to the feature_types.yaml file defining the type (categorical, gaussian, etc.)
+  # and states for each feature
   feature_types: data/feature_types.yaml
-  # The coordinate reference system of the input data (PROJ string or EPSG code)
-  # This may differ from map_projection in config.yaml
+  # Coordinate reference system of the input data as a PROJ string or EPSG code
+  # May differ from map_projection in config_style.yaml
   projection: "epsg:4326"
 
+# ------------------------------------------------------------
+# Results settings
+# Defines where to find the sBayes results and where to save plots
+# ------------------------------------------------------------
 results:
-  # Path to the results files (clusters and stats) from a sBayes run
-  path_in: results/uralic-test
+  # Path to the results directory containing clusters_*.txt, stats_*.txt and likelihood_*.h5 files
+  # Can be a flat directory (single model) or contain subdirectories (multiple models)
+  path_in: results
   # Path to the directory where plots will be saved
+  # null = defaults to path_in + '_plots'
   path_out: null
   # Fraction of samples to discard as burn-in (0.0 to 1.0)
   burn_in: 0.2
   # Keep every nth sample to reduce memory usage (1 = keep all samples)
   thinning: 1
 
+# ------------------------------------------------------------
+# Plot settings
+# Defines which plots to generate and their analytical settings
+# Omit a section entirely to skip that plot type
+# ------------------------------------------------------------
 plots:
+
+  # Weight simplex plots — posterior distribution of cluster and confounder weights
   weights:
+    # Features to plot. Empty = plot all features
     features: ["GB020", "GB021"]
+
+  # Preference plots — posterior distribution of feature preferences per component (cluster or group in confounder)
   preferences:
-    features: [ "GB020", "GB021"]  # Null or empty = plot all features
-    components:            # Null or empty = plot all components, "clusters" = plot cluster effects only, or provide a list of confounder names and groups e.g. "family"
+    # Features to plot. Empty = plot all features
+    features: ["GB020", "GB021"]
+    # Components to plot. Empty = plot all components
+    # Each entry has a component name (confounder or "clusters") and optional groups
+    components:
       - component: universal
       - component: family
-        groups:            # Null or empty = plot all groups within the component, or provide a specific group name e.g. "Turkic", "a_0"
+        # Groups to plot within the component. Empty = plot all groups
+        groups:
           - Turkic
+    # Reference component shown as gray overlay behind each preference plot
+    # Must be a confounder with one group applying to all objects e.g. "universal"
+    # null = no reference overlay
     reference:
-      universal   # None or empty = no reference overlay, or provide a confounder name with one group that applies to all objects, e.g. "universal"
+      component: universal
+
+  # Pie chart plots — posterior cluster membership per object
   pies:
     enabled: true
+
+  # PSIS-LOO model comparison plots — compares models with different numbers of clusters
+  # Requires likelihood files (likelihood_*.h5) in the results directory
   loo:
     enabled: true
-  map:
-    type: idw                   # pie | line | idw
-    plot_confounder: family
-    labels: all                 # all | in_cluster | none
-    min_posterior_probability: 0.6
-    per_cluster: true          # produces one map per cluster rather than all clusters in one map
-    line:
-      graph: "delaunay"        # complete | delaunay | gabriel
-    idw:
-      resolution: 50000      # grid cell size in map CRS units
-      power: 2
-      background_weight:  1.0 # weight of background color
 
+  # Posterior map — geographic visualization of cluster assignments
+  map:
+    # Map type: "line" = scatter + graph, "pie" = scatter + pie charts, "idw" = interpolated map
+    type: line
+    # Confounder to overlay as alpha shapes on the map e.g. "family". null = no overlay
+    plot_confounder: family
+    # Which objects to label: "all", "in_cluster" or "none"
+    labels: all
+    # Minimum posterior probability for an object to appear in the cluster
+    # null = show all objects (use for line maps)
+    min_posterior_probability: 0.6
+    # Additionally, generate one map per cluster instead of all clusters in one map
+    per_cluster: false
+
+    # Line map settings — only relevant when type is "line"
+    line:
+      # Graph type connecting objects within a cluster: "gabriel", "delaunay" or "complete"
+      graph: gabriel
+
+    # IDW map settings — only relevant when type is "idw"
+    idw:
+      # Grid cell size in map CRS units. Smaller = finer grid, slower computation
+      resolution: 50000
+      # Distance decay power. Higher = more influence from nearby points
+      power: 2
+      # Weight of background color in areas far from any data point
+      background_weight: 1.0

@@ -1,180 +1,436 @@
-global:
-  format: "png"
-  resolution: 300
-  cluster_colors:
-    - "red"
-    - "green"
+# ============================================================
+# sBlot style configuration file
+# Controls the visual appearance of all plots
+# Run `sblot --init` to generate this file with default values
+# ============================================================
 
+# ------------------------------------------------------------
+# Global settings
+# Applied to all plots unless overridden in a specific section
+# ------------------------------------------------------------
+global:
+  # Output file format: "pdf", "png" or "svg"
+  format: "png"
+  # Output resolution in DPI. Typical values: 300 (print), 96 (screen)
+  resolution: 300
+  # Hex color strings for each cluster, used consistently across all plots
+  # Empty = auto-generate visually distinct colors
+  cluster_colors: []
+
+# ------------------------------------------------------------
+# Weight simplex plots
+# Posterior distribution of areal, universal and inheritance weights
+# ------------------------------------------------------------
 weights:
+  # Style settings for the (triangular) probability simplex
   simplex:
+    # Color of the KDE curve and simplex border
     color: "#005570"
+    # Line width of the simplex border
     border_width: 0.2
+    # Padding around the simplex in axis units
     padding: 0.1
+    # Stretch factor for corner label positions (>1 moves labels outward)
     label_stretch: 1.15
+
+  # Style settings for the mean weight marker inside the simplex
   mean:
+    # Whether to show the mean weight as a marker
     show: true
+    # Color of the mean marker
     color: "#ed1696"
+    # Size of the mean marker in points²
     size: 10
+    # Matplotlib marker style
     marker: o
+
+  # Style settings for legend elements
   legend:
+    # Feature name displayed above each simplex panel
     title:
+      # Whether to add state labels
       add: true
       font_size: 6
+      # Position in axes coordinates (0,0 = bottom left, 1,1 = top right)
       position:
         x: 0
         y: 1
+    # Component labels shown at each simplex corner
     corner_labels:
+       # Labels for each corner. Inferred from component names if empty.
+      names : []
+      # Whether to add corner labels
       add: true
+       # Font size of corner labels
       font_size: 6
+
+  # Grid layout settings
   output:
+    # Width and height of each simplex panel in inches
     width_subplot: 2
     height_subplot: 2
+    # Number of columns in the simplex grid
     n_columns: 5
+    # Spacing between panels (matplotlib wspace and hspace)
     spacing_horizontal: 0.1
     spacing_vertical: 0.1
 
+# ------------------------------------------------------------
+# Preference simplex plots
+# Shows the posterior distribution of feature state preferences
+# for each component (areal effect and confounders). One grid
+# of simplex panels is generated per component.
+# ------------------------------------------------------------
 preferences:
+  # Color of the KDE curve and mean marker for binary features (ywo states).
+  # For features with more states, a fixed cubehelix color map is used
+  # automatically.
   color: "#005570"
+
+  # Color of the reference component overlay shown behind each simplex panel.
+  # Only visible when reference_component is set in config_plot.yaml.
   reference_color: "#b0b0b0"
+
+  # Style settings for legend elements within each simplex panel
   legend:
+
+    # State labels shown for each corner of the simplex.
+    # State names are taken from the feature_types.yaml file.
     labels:
+      # Whether to add state labels
       add: true
+      # Font size of state labels
       font_size: 4
+
+    # Feature name displayed above each simplex panel
     title:
+      # Whether to add the feature name as a title
       add: true
+      # Font size of the title
       font_size: 6
+      # Title position in axes coordinates (0,0 = bottom left, 1,1 = top right)
       position:
         x: 0
         y: 1
+
+  # Grid layout settings — one grid per component
   output:
+    # Width and height of each simplex panel in inches
     width_subplot: 3
     height_subplot: 3
+    # Number of columns in the simplex grid
     n_columns: 5
+    # Spacing between panels (matplotlib wspace and hspace)
     spacing_horizontal: 0.2
     spacing_vertical: 0.3
 
+# ------------------------------------------------------------
+# Pie chart plots
+# Shows the posterior cluster membership for each object as a
+# pie chart. Each slice represents the fraction of posterior
+# samples in which the object was assigned to a given cluster.
+# Objects not assigned to any cluster are shown in a neutral
+# color. One pie chart is generated per object, arranged in a grid.
+# ------------------------------------------------------------
 pies:
+
+  # Style settings for the text labels shown next to each pie chart.
+  # Each object is labelled with its index number and name.
   label:
+    # Font size of the object index number
     index_size: 15
+    # Font size of the object name
     name_size: 15
-    max_label_length: 10    # threshold for breaking long labels
+    # Maximum label length in characters before the name is broken
+    # into two lines at the nearest space or hyphen
+    max_label_length: 10
+
+  # Style settings for individual pie charts
   pie:
-    radius: 15              # pie chart radius
-    no_cluster_color: lightgrey   # The color for objects not in any cluster
+    # Pie chart radius in axis units. The pie is centered at the object
+    # location in the panel
+    radius: 15
+    # Color of the pie slice representing samples where the object was
+    # not assigned to any cluster
+    no_cluster_color: lightgrey
+
+  # Axes limits and label positions within each pie panel.
+  # The pie is drawn in data coordinates so these limits control
+  # how much space surrounds it. The default values are chosen to
+  # give a comfortable margin around a pie of radius 15.
   axes:
+    # Horizontal axis limits
     x_min: 0
     x_max: 160
+    # Vertical axis limits
     y_min: -10
     y_max: 10
-    index_x: 0.20          # x position of index label
-    name_x: 0.25           # x position of name label
-    label_y: 0.5           # y position of both labels
+    # Horizontal position of the index number label in axes coordinates (0–1)
+    index_x: 0.20
+    # Horizontal position of the object name label in axes coordinates (0–1)
+    # Should be slightly to the right of index_x to avoid overlap
+    name_x: 0.25
+    # Vertical position of both labels in axes coordinates (0–1)
+    # 0.5 = vertically centered in the panel
+    label_y: 0.5
+
+  # Grid layout settings
   output:
+    # Width and height of each pie panel in inches
     width: 4
     height: 2
+    # Spacing between panels (matplotlib wspace and hspace)
     spacing_horizontal: 0.01
     spacing_vertical: 0.01
 
+# ------------------------------------------------------------
+# LOO plots
+# PSIS-LOO model comparison across models with different k
+# ------------------------------------------------------------
 loo:
+  # Fill color for box plots (used when only one value of k is present)
   box_color: "#005570"
+  # Line width for ELPD-LOO curves (used when multiple values of k are present)
   line_width: 0.5
+  # Line style for ELPD-LOO curves: "solid", "dashed" or "dotted"
   line_style: "dashed"
   output:
+    # Figure dimensions in inches
     width: 14
     height: 10
 
+
+# ------------------------------------------------------------
+# Map plots
+# Geographic visualization of posterior cluster assignments.
+# Objects are plotted at their geographic locations and colored
+# by their most probable cluster assignment. Three map types
+# are available: line map (scatter + graph connections),
+# pie map (pie charts showing probabilistic membership) and
+# IDW map (spatially interpolated color field).
+# ------------------------------------------------------------
 map:
+
+  # Geographic settings: projection, extent and base map data sources
   geo:
-    # The coordinate reference system of the base map. Defaults to the data projection if not set.
+
+    # The coordinate reference system for rendering the map, as a PROJ string
+    # or EPSG code. Should be a projected CRS (metres) for accurate distance
+    # representation. null = defaults to the data projection from config_plot.yaml.
+    # Example: Lambert Azimuthal Equal Area centred on the study area.
     map_projection: "+proj=laea +lon_0=42.890625 +lat_0=65.4378522 +datum=WGS84 +units=m +no_defs"
-    extent:               # Map extent. Defaults to the data extent if not set
+
+    # Spatial extent of the map in map CRS units (metres for projected CRS).
+    # null = auto-computed from the object locations with padding.
+    # Override to zoom in on a specific region or ensure a consistent extent
+    # across multiple model runs.
+    extent:
       x_min: null
       x_max: null
       y_min: null
       y_max: null
+
+    # Base map geographic data sources.
+    # The base map provides geographic context (land masses, rivers, lakes).
     basemap:
+      # Whether to add a base map at all
       add: true
-      polygon: "<DEFAULT>"    # uses package default
-      line: "<DEFAULT>"       # uses package default
-      point: null             # no points by default
+      # Path to a GeoJSON polygon file for land masses and country borders.
+      # "<DEFAULT>" = use the bundled Natural Earth 1:50m land polygons.
+      # Provide a custom path for higher resolution or different regions.
+      polygon: "<DEFAULT>"
+      # Path to a GeoJSON line file for rivers and lakes.
+      # "<DEFAULT>" = use the bundled Natural Earth 1:50m rivers and lakes.
+      line: "<DEFAULT>"
+      # Path to a GeoJSON point file for additional point features, e.g. cities.
+      # null = no point layer added.
+      point: null
+
+  # Visual settings control how objects, clusters, confounders and
+  # base map layers are rendered on the map
   graphics:
+
+    # Style settings for all objects (languages, sites) plotted on the map.
+    # Objects are always shown as a background scatter layer regardless of
+    # map type.
     objects:
+      # Color of object markers shown as background scatter
       color: "#000000"
+      # Matplotlib marker style
       marker: o
+      # Marker size in points²
       size: 5
+      # Whether to add numeric index labels to each object on the map.
+      # Labels are used in the index table to identify objects by name.
       label: true
+      # Font size of object index labels
       font_size: 5
+
+    # Style settings for cluster assignments rendered on the map.
+    # Applies to all map types (line, dot, IDW).
     clusters:
+      # Matplotlib marker style for cluster objects
       marker: o
-      color: max_cluster       # "max_cluster" or "as_objects"
-      size: frequency          # "frequency" or fixed float, e.g., 10
-      max_size: 50             # maximum size when size is "frequency"
-      line_width: frequency    # "frequency" or fixed float, e.g., 1.0
-      max_line_width: 1        # maximum width when line_width is "frequency"
-      alpha: frequency         # "frequency" or fixed float, e.g., 0.8
+      # Color of object markers:
+      # "max_cluster" = each object is colored by its most probable cluster
+      # "as_objects" = all objects use the neutral objects.color
+      color: max_cluster
+      # Marker size:
+      # "frequency" = size scales with posterior assignment probability
+      # fixed float = all markers have the same size, e.g., 10
+      size: frequency
+      # Maximum marker size when size is "frequency" (in points²)
+      max_size: 50
+      # Line width for cluster connection lines (line map only):
+      # "frequency" = width scales with posterior co-occurrence frequency
+      # fixed float = all lines have the same width, e.g., 1.0
+      line_width: frequency
+      # Maximum line width when line_width is "frequency"
+      max_line_width: 1
+      # Line and marker opacity:
+      # "frequency" = opacity scales with posterior assignment probability
+      # fixed float = fixed opacity, e.g., 0.8
+      alpha: frequency
+      # Base pie chart radius as a fraction of the minimum map span.
+      # Only relevant for dot maps. Increase for larger pies, decrease
+      # if pies overlap.
       pie_radius_factor: 0.008
+
+    # Style settings for confounder group overlays shown as alpha shapes
+    # (concave hulls) around objects belonging to the same group.
+    # Only shown when plot_confounder is set in config_plot.yaml.
     confounders:
+      # Marker size for confounder scatter points in points²
       size: 180
+      # Hex color strings for each confounder group.
+      # Empty = auto-generate visually distinct colors.
+      # If fewer colors are provided than groups, remaining colors are
+      # auto-generated.
       color:
         - "#b3e2cd"
         - "#f1e2cc"
         - "#cbd5e8"
+      # Buffer distance in map CRS units applied to alpha shapes before
+      # drawing. Creates a smooth, slightly inflated boundary around each
+      # group. Increase for more padding, decrease for tighter boundaries.
       buffer: 0.5
+      # Alpha shape concavity parameter. Larger values produce tighter,
+      # more concave shapes that follow the point distribution more closely.
+      # Too large and interior points may be excluded from the shape.
       shape: 20
+
+    # Visual style for base map layers
     basemap:
+      # Background color of the map axes, visible in ocean and sea areas
       background: "#f0f8ff"
+      # Style for the polygon layer (land masses, country borders)
       polygon:
+        # Fill color of land polygons
         color: white
+        # Outline color of land polygons
         outline_color: grey
+        # Outline line width
         outline_width: 0.1
+      # Style for the line layer (rivers, lakes)
       line:
+        # Color of river and lake lines
         color: skyblue
+        # Line width
         width: 0.5
+      # Style for the optional point layer
       point:
+        # Color of the points
         color: black
+        # Point marker size
         size: 10
+        # Matplotlib marker style
         marker: o
+
+  # Legend settings control which legend elements are shown and where
   legend:
+
+    # Cluster legend showing one entry per cluster.
+    # For line maps shows a colored line; for dot maps shows a colored circle.
     clusters:
+      # Whether to add the cluster legend
       add: true
+      # Whether to show log likelihood values as cluster labels instead of
+      # the default Z_1, Z_2, ... notation
       log_likelihood: false
+      # Font size of the legend element
       font_size: 10
+      # Legend position in axes coordinates (0,0 = bottom left, 1,1 = top right)
       position:
         x: 0.005
         y: 0.95
+
+    # Confounder legend showing one colored patch per confounder group.
+    # Only shown when plot_confounder is set in config_plot.yaml.
     confounders:
+      # Whether to add the confounder legend
       add: true
+      # Font size of the legend element
       font_size: 10
+      # Legend position in axes coordinates (0,0 = bottom left, 1,1 = top right)
       position:
         x: 0.005
         y: 0.8
+
+    # Line width reference legend showing what line width corresponds to
+    # what posterior co-occurrence frequency. Only relevant for line maps.
     lines:
+      # Whether to add the line width legend
       add: true
+      # Font size of the legend element
       font_size: 10
+      # Legend position in axes coordinates (0,0 = bottom left, 1,1 = top right)
       position:
         x: 0.005
         y: 0.5
+      # Posterior frequencies shown as reference lines.
+      # Each value produces one line in the legend at the corresponding width.
       reference_frequencies:
         - 0.5
         - 0.7
         - 0.9
+
+    # Inset overview map showing the study area in its broader geographic
+    # context. A rectangle marks the extent of the main map.
     overview_map:
+      # Whether to add the overview map
       add: false
+      # How much wider and taller the overview extent is relative to
+      # the main map extent. 1.5 = 50% wider/taller in each direction.
       extent_factor:
-        x: 1.5    # the extent is 1.5x wider than that of the main map
+        x: 1.5
         y: 1.5
-      width: 0.3  # overview window is 20% of the main image
+      # Overview window size as a fraction of the main figure dimensions
+      width: 0.3
       height: 0.3
+      # Overview window position in axes coordinates
       position:
         x: 0.005
         y: 0.15
+
+    # Correspondence table mapping object index numbers (shown on the map)
+    # to object names. Placed below the map.
     index_table:
+      # Whether to add the index table
       add: true
+      # Which objects to include: "all" = all objects, "in_cluster" = only
+      # objects assigned to a cluster with > min_posterior_probability
       show: "all"
       font_size: 10
+      # Number of columns in the table. More columns = wider, shorter table.
       n_columns: 2
+      # Whether to color the object names by their cluster color for easy
+      # cross-referencing between map and table
       color_labels: true
+      # Table height as a fraction of the axes height
       height: 0.8
+
+  # Output dimensions
   output:
+    # Figure dimensions in inches
     width: 14
     height: 10

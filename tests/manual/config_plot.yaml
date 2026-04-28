@@ -34,7 +34,7 @@ plots:
   loo:
     enabled: true
   map:
-    type: idw                   # pie | line | idw
+    type: pie                   # pie | line | idw | all
     plot_confounder: family
     labels: all                 # all | in_cluster | none
     min_posterior_probability: 0.6
