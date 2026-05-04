@@ -1,26 +1,95 @@
-# sBlot - plotting for sBayes
- This package is design to provide plotting functions for the project sBayes. Here we describe some basic commands to run plotting functions. For more detailed instructions explaining each step in the analysis and the various settings, please consult the user manual (sBlot Documentation.pdf)
+# sBlot
 
+sBlot is a Python library for visualising the results of a [sBayes](https://github.com/NicoNeureiter/sBayes) analysis. 
+It provides static plots (weights, preferences per component, pie charts, maps and LOO model comparison) as well as an interactive browser-based explorer for inspecting posterior samples.
 
-# Installation
-Same as sbayes project
+For detailed instructions on configuration and individual plot types, see the [documentation](https://github.com/derpetermann/sBlot).
 
-# Running sBlot
-sBot can be used as a python library or through a command line interface. Here we describe how to run sBlot in the command line interface,or run it as a python package. 
+## Installation
 
-To run sBlots from the command line, simply call:
-```shell 
-python plot.py config_plot.json map
+Install the latest release from PyPI:
+
+```
+pip install sblot
 ```
 
+To include the interactive explorer:
 
-To run sBlot as python package, call:
 ```
-plot = Plot()
-plot.load_config(config_file='config_plot.json')
-plot.read_data()
+pip install sblot[interactive]
+```
 
-for name, result in plot.iterate_over_models():      
-	plot.posterior_map(results=result, file_name=f'map_{name}')
-	plot.get_idw_map(result,name)
+To include LOO model comparison plots:
+
 ```
+pip install sblot[loo]
+```
+
+To install all optional dependencies:
+
+```
+pip install sblot[all]
+```
+
+To install the development version directly from GitHub:
+
+```
+pip install git+https://github.com/derpetermann/sBlot.git
+```
+
+## Quick start
+
+### Command line
+
+Generate all plots specified in `config_plot.yaml`:
+
+```
+sblot -c config_plot.yaml
+```
+
+To use a custom style configuration:
+
+```
+sblot -c config_plot.yaml -s config_style.yaml
+```
+
+To initialise a new experiment directory with example configuration files:
+
+```
+sblot --init my_experiment/
+```
+
+### Python script
+
+```
+from sblot.config_io import load_config
+from sblot.plots.weights import plot_weights_grid
+from sblot.plots.preferences import plot_preferences_grid
+from sblot.plots.pies import plot_pies
+from sblot.plots.map import plot_maps
+from sblot.plots.loo import plot_loo
+
+config = load_config("config_plot.yaml", "config_style.yaml")
+data = config.read_data()
+all_models = list(config.read_results())
+
+for model in all_models:
+    plot_weights(model.results, config)
+    plot_preferences(model.results, config)
+    plot_pies(model.results, data, config)
+    plot_maps(model.results, data, config)
+
+plot_loo(all_models, config)
+```
+
+### Interactive explorer
+
+```
+sblot-interactive --confounder family -d data/features.csv
+```
+
+Then open `http://localhost:8050` in your browser.
+
+## License
+
+sBlot is released under the [GNU General Public License v3](LICENSE).
