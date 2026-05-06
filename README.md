@@ -3,7 +3,7 @@
 sBlot is a Python library for visualising the results of a [sBayes](https://github.com/NicoNeureiter/sBayes) analysis. 
 It provides static plots (weights, preferences per component, pie charts, maps and LOO model comparison) as well as an interactive browser-based explorer for inspecting posterior samples.
 
-For detailed instructions on configuration and individual plot types, see the [documentation](https://github.com/derpetermann/sBlot).
+For detailed instructions on configuration and individual plot types, see the [documentation](https://derpetermann.github.io/sBlot/).
 
 ## Installation
 
@@ -84,11 +84,11 @@ plot_loo(all_models, config)
 
 ### Interactive explorer
 
+In the command line:
 ```
-sblot-interactive --confounder family -d data/features.csv
+sblot-interactive --conf family -d data/features.csv
 ```
-
-Then open `http://localhost:8050` in your browser.
+Then open the interactive map in your browser at the address shown in the command line.
 
 ## License
 
