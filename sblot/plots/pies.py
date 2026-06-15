@@ -119,7 +119,7 @@ def plot_pies(
     path_out.mkdir(parents=True, exist_ok=True)
 
     fig.savefig(
-        path_out / f'pie_plot.{global_style.format}',
+        path_out / f'pie_plot_K{results.n_clusters}.{global_style.format}',
         bbox_inches='tight',
         dpi=global_style.resolution,
         format=global_style.format,

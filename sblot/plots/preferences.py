@@ -272,7 +272,7 @@ def plot_preferences(
 
 
         fig.savefig(
-            path_out / f'preferences_{component}.{global_style.format}',
+            path_out / f'preferences_{component}_K{results.n_clusters}.{global_style.format}',
             bbox_inches='tight',
             dpi=global_style.resolution,
             format=global_style.format,

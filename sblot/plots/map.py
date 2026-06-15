@@ -1137,7 +1137,7 @@ def plot_map(
 
     path_out.mkdir(parents=True, exist_ok=True)
     fig.savefig(
-        path_out / f'{map_name}.{global_.format}',
+        path_out / f'{map_name}_K{results.n_clusters}.{global_.format}',
         bbox_inches='tight',
         dpi=global_.resolution,
         format=global_.format,
