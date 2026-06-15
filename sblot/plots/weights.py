@@ -89,12 +89,15 @@ def plot_weights_simplex(
         clip_patch = MplPolygon(corners, closed=True, transform=ax.transData)
 
         # KDE density plot
-        sns.kdeplot(
-            x=x, y=y,
-            fill=True, cut=30, levels=20,
-            clip=((xmin, xmax), (ymin, ymax)),
-            cmap=PREF_COLOR_MAP, ax=ax,
-        )
+        try:
+            sns.kdeplot(
+                x=x, y=y,
+                fill=True, cut=30, levels=20,
+                clip=((xmin, xmax), (ymin, ymax)),
+                cmap=PREF_COLOR_MAP, ax=ax,
+            )
+        except ValueError as e:
+            print(e)
 
         # Clip all artists to the simplex path
         for artist in ax.get_children():
@@ -210,7 +213,7 @@ def plot_weights(
     path_out.mkdir(parents=True, exist_ok=True)
 
     fig.savefig(
-        path_out / f'weights_grid.{global_style.format}',
+        path_out / f'weights_grid_K{results.n_clusters}.{global_style.format}',
         bbox_inches='tight',
         dpi=global_style.resolution,
         format=global_style.format,
