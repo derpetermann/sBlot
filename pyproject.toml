@@ -54,7 +54,7 @@ all = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/maeva-jing/sBlot"
+Homepage = "https://github.com/derpetermann/sBlot"
 
 [project.scripts]
 sblot = "sblot.run:cli"
@@ -65,5 +65,5 @@ where = ["."]
 exclude = ["build", "test*"]
 
 [tool.setuptools.package-data]
-"sblot.data.maps" = ["*.geojson"]
+"sblot.data.map" = ["*.geojson"]
 "sblot.data.example_configs" = ["*.yaml"]
