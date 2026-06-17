@@ -64,7 +64,6 @@ venv.bak/
 
 # Custom
 workbench/
-data/
 .idea
 
 # MacOS file
