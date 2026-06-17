@@ -723,7 +723,7 @@ def add_index_table(
         while len(row) < n_col * 2:
             row.append("#000000")
 
-    widths = [0.025, 0.2] * n_col
+    widths = [0.03, 0.2] * n_col
     y_min = -(legend.index_table.height + 0.01)
     table = ax.table(
         cellText=table_fill,
