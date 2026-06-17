@@ -746,8 +746,12 @@ class Config(BaseConfig):
             experiment_name = path_in.parent.name
         else:
             # Nested structure — one subfolder per model
+            matched_dirs = [
+                (d, re.search(r'K(\d+)', d.name))
+                for d in path_in.iterdir() if d.is_dir()
+            ]
             model_dirs = sorted(
-                [d for d in path_in.iterdir() if d.is_dir()],
+                [d for d, m in matched_dirs if m is not None],
                 key=lambda d: int(re.search(r'K(\d+)', d.name).group(1))
             )
             experiment_name = path_in.name
@@ -756,33 +760,17 @@ class Config(BaseConfig):
             raise FileNotFoundError(f"No results found in {path_in}.")
 
         for model_dir in model_dirs:
-            cluster_files = sorted(model_dir.glob("clusters_*.txt"))
-            stats_files = sorted(model_dir.glob("stats_*.txt"))
-
-            if not cluster_files:
+            samples_paths = sorted(model_dir.glob("samples_*.h5"))
+            if not samples_paths:
                 continue
 
-
-            # Align runs in memory
-            all_results = align_posterior(cluster_files, stats_files)
-
-            # Concatenate runs along the samples axis
-            clusters_combined = np.concatenate(
-                [r.clusters for r in all_results], axis=1
-            )
-            parameters_combined = concat(
-                [r.parameters for r in all_results], ignore_index=True
-            )
-
-            # Apply burn-in and thinning
             burn_in = self.experiment.results.burn_in
             thinning = self.experiment.results.thinning
-            n_total = clusters_combined.shape[1]
-            burn_in_idx = int(burn_in * n_total)
-            indices = list(range(burn_in_idx, n_total, thinning))
 
-            clusters_combined = clusters_combined[:, indices, :]
-            parameters_combined = parameters_combined.iloc[indices]
+            results = []
+            for samples_path in samples_paths:
+                r = Results.from_h5(samples_path, burn_in=burn_in, subsample_interval=thinning)
+                results.append(r)
 
             # Read likelihood files if available
             likelihoods = []
@@ -798,20 +786,54 @@ class Config(BaseConfig):
                             read_likelihood_for_az(likelihood_path, burn_in)
                         ))
                     except Exception as e:
-                        warnings.warn(
-                            f"Error reading '{likelihood_path}'. Skipping.\n{e}"
-                        )
+                        warnings.warn(f"Error reading '{likelihood_path}'. Skipping.\n{e}")
 
             yield ModelResults(
-                k=clusters_combined.shape[0],
+                k=results[0].n_clusters,
                 name=experiment_name,
                 likelihoods=likelihoods,
-                results=Results(
-                    clusters=clusters_combined,
-                    parameters=parameters_combined,
-                    burn_in=0,
-                )
+                results=Results.concatenate(results),
             )
+
+            # # Align runs in memory
+            # all_results = align_posterior(cluster_files, stats_files)
+            #
+            # # Concatenate runs along the samples axis
+            # clusters_combined = np.concatenate(
+            #     [r.clusters for r in all_results], axis=1
+            # )
+            # parameters_combined = concat(
+            #     [r.parameters for r in all_results], ignore_index=True
+            # )
+            #
+            # # Apply burn-in and thinning
+            # burn_in = self.experiment.results.burn_in
+            # thinning = self.experiment.results.thinning
+            # n_total = clusters_combined.shape[1]
+            # burn_in_idx = int(burn_in * n_total)
+            # indices = list(range(burn_in_idx, n_total, thinning))
+            #
+            # clusters_combined = clusters_combined[:, indices, :]
+            # parameters_combined = parameters_combined.iloc[indices]
+            #
+            # # Read likelihood files if available
+            # likelihoods = []
+            # if self.experiment.plots.loo is not None:
+            #     for likelihood_path in sorted(model_dir.glob("likelihood_*.h5")):
+            #         # Skip hot chains from MC3 runs — hot chain likelihoods are not valid posterior samples
+            #         if ".chain" in likelihood_path.stem:
+            #             continue
+            #         run_id = int(likelihood_path.stem.rpartition("_")[-1])
+            #         try:
+            #             likelihoods.append((
+            #                 run_id,
+            #                 read_likelihood_for_az(likelihood_path, burn_in)
+            #             ))
+            #         except Exception as e:
+            #             warnings.warn(
+            #                 f"Error reading '{likelihood_path}'. Skipping.\n{e}"
+            #             )
+
 
 
 def load_config(
