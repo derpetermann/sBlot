@@ -104,7 +104,7 @@ def cli() -> None:
         "--init",
         type=Path,
         nargs="?",
-        const=Path("."),
+        const=Path(".."),
         default=None,
         metavar="TARGET_DIR",
         help="Copy example config files to TARGET_DIR. "
