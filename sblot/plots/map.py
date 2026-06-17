@@ -27,8 +27,31 @@ from sblot.core.transforms import get_cluster_probability, clusters_to_graph
 from shapely import BufferCapStyle, BufferJoinStyle, unary_union, Point
 from shapely.geometry import Polygon, box
 from shapely.plotting import plot_polygon
+import pyproj
 from typing import Literal
 
+
+def get_map_clipbox(map_proj, world_crs):
+    try:
+        lon_0 = map_proj.coordinate_operation.params[0].value
+    except (AttributeError, KeyError):
+        lon_0 = 0.0
+        warnings.warn(f"I could not find the false origin (lon=0) of the projection {map_proj}. "
+              f"It is assumed that the false origin is 0.0. "
+              f"If plotting distorts the base map polygons, use a different projection, "
+              f"preferably one with a well-defined false origin.")
+
+    if lon_0 > 0:
+        anti_meridian = lon_0 - 180
+    else:
+        anti_meridian = lon_0 + 180
+
+    offset = 10
+    clip_box_1 = box(anti_meridian + 1, -90, 180 + offset, 90)
+    clip_box_2 = box(anti_meridian - 1, -90, -180 + offset, 90)
+    clip_box = gpd.GeoSeries([clip_box_1, clip_box_2], crs=world_crs)
+
+    return clip_box
 
 def add_basemap_polygon(
     config: Config,
@@ -69,6 +92,10 @@ def add_basemap_polygon(
             lambda geom: fix_polygon(geom) if geom.geom_type == 'Polygon'
             else fix_multi_polygon(geom)
         )
+
+    # Make sure polygon lines don't wrap around
+    clipbox = get_map_clipbox(pyproj.CRS(map_proj), polygons.crs)
+    polygons = polygons.clip(clipbox)
 
     polygons = polygons.to_crs(map_proj)
     polygons.geometry = polygons.geometry.buffer(0)
