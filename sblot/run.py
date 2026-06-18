@@ -10,9 +10,13 @@ from sblot.plots.pies import plot_pies
 from sblot.plots.map import plot_maps
 from sblot.plots.loo import plot_loo
 
+PLOT_TYPES = ["weights", "preferences", "pies", "map", "loo"]
+
+
 def main(
     config: str | Path,
     style: str | Path | None = None,
+    plot_types: list[str] | None = None,
 ) -> None:
     """Run the sBlot plotting pipeline.
 
@@ -23,23 +27,28 @@ def main(
         config: Path to config_plot.yaml.
         style: Optional path to config_style.yaml. Defaults to package
                defaults if not provided.
+        plot_types: Optional list of plot types to generate. If None, all
+                    plots enabled in the config are generated.
     """
 
     config = load_config(config, style)
     data = config.read_data()
+
+    def enabled(name: str) -> bool:
+        return (plot_types is None or name in plot_types) and bool(getattr(config.experiment.plots, name))
     all_models = list(config.read_results())
 
     for model in all_models:
-        if config.experiment.plots.weights:
+        if enabled("weights"):
             plot_weights(model.results, config)
-        if config.experiment.plots.preferences:
+        if enabled("preferences"):
             plot_preferences(model.results, config)
-        if config.experiment.plots.pies:
+        if enabled("pies"):
             plot_pies(model.results, data, config)
-        if config.experiment.plots.map:
+        if enabled("map"):
             plot_maps(model.results, data, config)
 
-    if config.experiment.plots.loo:
+    if enabled("loo"):
         plot_loo(all_models, config)
 
 
@@ -101,6 +110,16 @@ def cli() -> None:
              "Defaults to package defaults if not provided.",
     )
     parser.add_argument(
+        "-p", "--plots",
+        dest="plot_types",
+        nargs="+",
+        choices=PLOT_TYPES,
+        default=None,
+        metavar="PLOT_TYPE",
+        help=f"Plot type(s) to generate. Choose from: {', '.join(PLOT_TYPES)}. "
+             "Defaults to all types enabled in the config.",
+    )
+    parser.add_argument(
         "--init",
         type=Path,
         nargs="?",
@@ -115,7 +134,7 @@ def cli() -> None:
     if cli_args.init is not None:
         init(cli_args.init)
     elif cli_args.config is not None:
-        main(config=cli_args.config, style=cli_args.style)
+        main(config=cli_args.config, style=cli_args.style, plot_types=cli_args.plot_types)
     else:
         parser.print_help()
 
