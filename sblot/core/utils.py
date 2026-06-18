@@ -562,6 +562,22 @@ def reproject_locations(
 
 
 
+def likelihood_to_arviz(likelihood_pointwise: NDArray) -> az.InferenceData:
+    """Convert a (n_samples, n_obs) log-likelihood array to ArviZ format for PSIS-LOO.
+
+    Args:
+        likelihood_pointwise: Log-likelihood array of shape (n_samples, n_obs),
+            with NA observations already excluded.
+    Returns:
+        ArviZ InferenceData object with log_likelihood group, compatible with az.loo().
+    """
+    lh = likelihood_pointwise[np.newaxis, ...]  # (1, n_samples, n_obs)
+    return az.from_dict(
+        posterior={"y": lh},
+        log_likelihood={"y": lh},
+    )
+
+
 def read_likelihood_for_az(likelihood_path: Path | str, burnin: float) -> xr.DataTree:
     """
     Reads a likelihood HDF5 file and converts it into an ArviZ-compatible DataTree.

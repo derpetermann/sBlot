@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import numpy as np
 import os
 import re
 import warnings
 
 from pathlib import Path
-from pandas import read_csv, concat
+from pandas import read_csv
 from pydantic import BaseModel, DirectoryPath, Field, model_validator, PositiveInt, field_validator
 from pydantic_core import PydanticCustomError
 from pydantic_core.core_schema import ValidationInfo
@@ -14,11 +13,15 @@ from pydantic.types import PathType
 from ruamel.yaml import YAML
 from sbayes.load_data import read_features_from_csv, Data
 from sbayes.results import Results
-from sblot.core.utils import fix_relative_path, read_likelihood_for_az
-from sblot.core.transforms import align_posterior
+from sblot.core.utils import fix_relative_path
 from typing import Annotated, Self, Iterator, Literal, NamedTuple, Union, get_args
 
 MapType = Literal["pie", "line", "idw"]
+
+
+class ModelResults(NamedTuple):
+    name: str | None
+    results: Results
 
 class RelativePathType(PathType):
     """Path validator that resolves paths relative to a base directory.
@@ -65,12 +68,6 @@ RelativeFilePath = Annotated[Path, RelativePathType('file')]
 
 RelativeDirectoryPath = Annotated[Path, RelativePathType('dir')]
 """A path to a directory, resolved relative to the config file location. Created if absent."""
-
-class ModelResults(NamedTuple):
-    k: int
-    name: str | None
-    results: Results
-    likelihoods: list[tuple]
 
 
 class BaseConfig(BaseModel, extra='forbid'):
@@ -725,17 +722,16 @@ class Config(BaseConfig):
         """Iterate over all models in the results directory.
 
         Handles two folder structures:
-        - Flat: path_in contains cluster and stats files directly
-        - Nested: path_in contains subfolders, each with cluster and stats files
+        - Flat: path_in contains samples files directly (single model)
+        - Nested: path_in contains subfolders, each with samples files
 
         Yields:
-            ModelResults(k, name, results) for each model found.
+            ModelResults(name, results) for each model found.
         """
-
         path_in = Path(self.experiment.results.path_in)
 
         # Check if results files are directly in path_in or in subfolders
-        direct_files = sorted(path_in.glob("clusters_*.txt"))
+        direct_files = sorted(path_in.glob("samples_*.h5"))
         if direct_files:
             # Flat structure — single model in path_in
             model_dirs = [path_in]
@@ -755,40 +751,21 @@ class Config(BaseConfig):
         if not model_dirs:
             raise FileNotFoundError(f"No results found in {path_in}.")
 
+        burn_in = self.experiment.results.burn_in
+        thinning = self.experiment.results.thinning
+
         for model_dir in model_dirs:
             samples_paths = sorted(model_dir.glob("samples_*.h5"))
             if not samples_paths:
                 continue
 
-            burn_in = self.experiment.results.burn_in
-            thinning = self.experiment.results.thinning
-
-            results = []
-            for samples_path in samples_paths:
-                r = Results.from_h5(samples_path, burn_in=burn_in, subsample_interval=thinning)
-                results.append(r)
-
-            # Read likelihood files if available
-            likelihoods = []
-            if self.experiment.plots.loo is not None:
-                for likelihood_path in sorted(model_dir.glob("likelihood_*.h5")):
-                    # Skip hot chains from MC3 runs — hot chain likelihoods are not valid posterior samples
-                    if ".chain" in likelihood_path.stem:
-                        continue
-                    run_id = int(likelihood_path.stem.rpartition("_")[-1])
-                    try:
-                        likelihoods.append((
-                            run_id,
-                            read_likelihood_for_az(likelihood_path, burn_in)
-                        ))
-                    except Exception as e:
-                        warnings.warn(f"Error reading '{likelihood_path}'. Skipping.\n{e}")
-
+            runs = [
+                Results.from_h5(p, burn_in=burn_in, subsample_interval=thinning)
+                for p in samples_paths
+            ]
             yield ModelResults(
-                k=results[0].n_clusters,
                 name=experiment_name,
-                likelihoods=likelihoods,
-                results=Results.concatenate(results),
+                results=Results.concatenate(runs),
             )
 
 
