@@ -157,7 +157,6 @@ class ResultsConfig(BaseConfig):
             self.path_out = RelativePathType.fix_path(self.path_out)
         return self
 
-
     @model_validator(mode="after")
     def validate_burn_in(self):
         if not 0.0 < self.burn_in < 1.0:
@@ -176,7 +175,6 @@ class GlobalConfig(BaseConfig):
     n_clusters: int = 0
     """Number of clusters — set at load time from results."""
 
-# Weights plots
 
 class WeightsLabelConfig(BaseConfig):
     """Style configuration for labels in weights plots."""
@@ -631,14 +629,6 @@ class MapIdwConfig(BaseConfig):
 
 class MapConfig(BaseConfig):
     type: Union[Literal["all"], list[MapType], MapType] = "line"
-
-    @field_validator("type", mode="before")
-    @classmethod
-    def expand_all(cls, value):
-        if value == "all":
-            return list(get_args(MapType))
-        return value
-
     """Map type. Either 'pie', 'line' or 'idw'"""
     plot_confounder: str | None = None
     """Add a confounder to the map."""
@@ -665,6 +655,12 @@ class MapConfig(BaseConfig):
     output: MapOutputConfig = Field(default_factory=MapOutputConfig)
     """Config for map output."""
 
+    @field_validator("type", mode="before")
+    @classmethod
+    def expand_all(cls, value):
+        if value == "all":
+            return list(get_args(MapType))
+        return value
 
     @model_validator(mode="after")
     def validate_min_posterior_probability(self):
@@ -794,46 +790,6 @@ class Config(BaseConfig):
                 likelihoods=likelihoods,
                 results=Results.concatenate(results),
             )
-
-            # # Align runs in memory
-            # all_results = align_posterior(cluster_files, stats_files)
-            #
-            # # Concatenate runs along the samples axis
-            # clusters_combined = np.concatenate(
-            #     [r.clusters for r in all_results], axis=1
-            # )
-            # parameters_combined = concat(
-            #     [r.parameters for r in all_results], ignore_index=True
-            # )
-            #
-            # # Apply burn-in and thinning
-            # burn_in = self.experiment.results.burn_in
-            # thinning = self.experiment.results.thinning
-            # n_total = clusters_combined.shape[1]
-            # burn_in_idx = int(burn_in * n_total)
-            # indices = list(range(burn_in_idx, n_total, thinning))
-            #
-            # clusters_combined = clusters_combined[:, indices, :]
-            # parameters_combined = parameters_combined.iloc[indices]
-            #
-            # # Read likelihood files if available
-            # likelihoods = []
-            # if self.experiment.plots.loo is not None:
-            #     for likelihood_path in sorted(model_dir.glob("likelihood_*.h5")):
-            #         # Skip hot chains from MC3 runs — hot chain likelihoods are not valid posterior samples
-            #         if ".chain" in likelihood_path.stem:
-            #             continue
-            #         run_id = int(likelihood_path.stem.rpartition("_")[-1])
-            #         try:
-            #             likelihoods.append((
-            #                 run_id,
-            #                 read_likelihood_for_az(likelihood_path, burn_in)
-            #             ))
-            #         except Exception as e:
-            #             warnings.warn(
-            #                 f"Error reading '{likelihood_path}'. Skipping.\n{e}"
-            #             )
-
 
 
 def load_config(
