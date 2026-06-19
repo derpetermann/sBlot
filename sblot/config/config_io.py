@@ -701,72 +701,76 @@ class Config(BaseConfig):
     style: StyleConfig
 
 
-    def read_data(self) -> Data:
-        """Read objects, features and confounders from the data files defined in this config.
+def read_data(config: Config) -> Data:
+    """Read objects, features and confounders from the data files defined in config.
 
-        Returns:
-            Tuple of (objects, features, confounders).
-        """
-        confounder_names = find_confounder_names(
-            self.experiment.data.features,
-            self.experiment.data.feature_types,
+    Args:
+        config: Combined plot and style configuration.
+    Returns:
+        Tuple of (objects, features, confounders).
+    """
+    confounder_names = find_confounder_names(
+        config.experiment.data.features,
+        config.experiment.data.feature_types,
+    )
+    return read_features_from_csv(
+        data_path=config.experiment.data.features,
+        feature_types_path=config.experiment.data.feature_types,
+        confounder_names=confounder_names,
+    )
+
+
+def read_results(config: Config) -> Iterator[ModelResults]:
+    """Iterate over all models in the results directory.
+
+    Handles two folder structures:
+    - Flat: path_in contains samples files directly (single model)
+    - Nested: path_in contains subfolders, each with samples files
+
+    Args:
+        config: Combined plot and style configuration.
+    Yields:
+        ModelResults(name, results) for each model found.
+    """
+    path_in = Path(config.experiment.results.path_in)
+
+    # Check if results files are directly in path_in or in subfolders
+    direct_files = sorted(path_in.glob("samples_*.h5"))
+    if direct_files:
+        # Flat structure — single model in path_in
+        model_dirs = [path_in]
+        experiment_name = path_in.parent.name
+    else:
+        # Nested structure — one subfolder per model
+        matched_dirs = [
+            (d, re.search(r'K(\d+)', d.name))
+            for d in path_in.iterdir() if d.is_dir()
+        ]
+        model_dirs = sorted(
+            [d for d, m in matched_dirs if m is not None],
+            key=lambda d: int(re.search(r'K(\d+)', d.name).group(1))
         )
-        return read_features_from_csv(
-            data_path=self.experiment.data.features,
-            feature_types_path=self.experiment.data.feature_types,
-            confounder_names=confounder_names,
+        experiment_name = path_in.name
+
+    if not model_dirs:
+        raise FileNotFoundError(f"No results found in {path_in}.")
+
+    burn_in = config.experiment.results.burn_in
+    thinning = config.experiment.results.thinning
+
+    for model_dir in model_dirs:
+        samples_paths = sorted(model_dir.glob("samples_*.h5"))
+        if not samples_paths:
+            continue
+
+        runs = [
+            Results.from_h5(p, burn_in=burn_in, subsample_interval=thinning)
+            for p in samples_paths
+        ]
+        yield ModelResults(
+            name=experiment_name,
+            results=Results.concatenate(runs),
         )
-
-
-    def read_results(self) -> Iterator[ModelResults]:
-        """Iterate over all models in the results directory.
-
-        Handles two folder structures:
-        - Flat: path_in contains samples files directly (single model)
-        - Nested: path_in contains subfolders, each with samples files
-
-        Yields:
-            ModelResults(name, results) for each model found.
-        """
-        path_in = Path(self.experiment.results.path_in)
-
-        # Check if results files are directly in path_in or in subfolders
-        direct_files = sorted(path_in.glob("samples_*.h5"))
-        if direct_files:
-            # Flat structure — single model in path_in
-            model_dirs = [path_in]
-            experiment_name = path_in.parent.name
-        else:
-            # Nested structure — one subfolder per model
-            matched_dirs = [
-                (d, re.search(r'K(\d+)', d.name))
-                for d in path_in.iterdir() if d.is_dir()
-            ]
-            model_dirs = sorted(
-                [d for d, m in matched_dirs if m is not None],
-                key=lambda d: int(re.search(r'K(\d+)', d.name).group(1))
-            )
-            experiment_name = path_in.name
-
-        if not model_dirs:
-            raise FileNotFoundError(f"No results found in {path_in}.")
-
-        burn_in = self.experiment.results.burn_in
-        thinning = self.experiment.results.thinning
-
-        for model_dir in model_dirs:
-            samples_paths = sorted(model_dir.glob("samples_*.h5"))
-            if not samples_paths:
-                continue
-
-            runs = [
-                Results.from_h5(p, burn_in=burn_in, subsample_interval=thinning)
-                for p in samples_paths
-            ]
-            yield ModelResults(
-                name=experiment_name,
-                results=Results.concatenate(runs),
-            )
 
 
 def load_config(

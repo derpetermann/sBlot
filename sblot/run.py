@@ -3,7 +3,7 @@ import importlib.resources as resources
 import shutil
 
 from pathlib import Path
-from sblot.config.config_io import load_config
+from sblot.config.config_io import load_config, read_data, read_results
 from sblot.plots.preferences import plot_preferences
 from sblot.plots.weights import plot_weights
 from sblot.plots.pies import plot_pies
@@ -32,11 +32,11 @@ def main(
     """
 
     config = load_config(config, style)
-    data = config.read_data()
+    data = read_data(config)
 
     def enabled(name: str) -> bool:
         return (plot_types is None or name in plot_types) and bool(getattr(config.experiment.plots, name))
-    all_models = list(config.read_results())
+    all_models = list(read_results(config))
 
     for model in all_models:
         if enabled("weights"):
