@@ -1,0 +1,12 @@
+data:
+  features: data/features.csv
+  feature_types: data/feature_types.yaml
+
+results:
+  path_in: results/
+  burn_in: 0.2
+  thinning: 1
+
+plots:
+  weights:
+    features: []
