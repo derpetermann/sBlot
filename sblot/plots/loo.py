@@ -4,8 +4,6 @@ import pandas as pd
 import seaborn as sns
 
 from sblot.config.config_io import Config, ModelResults
-from sblot.core.utils import likelihood_to_arviz
-
 
 def plot_loo(all_models: list[ModelResults],
              config: Config,
@@ -16,7 +14,7 @@ def plot_loo(all_models: list[ModelResults],
     For multiple k values, generates a line plot showing ELPD-LOO vs. k.
 
     Args:
-        all_models: List of ModelResults containing results with pointwise likelihoods.
+        all_models: list of ModelResults containing the likelihoods.
         config: Combined plot and style configuration.
         verbose: If True, print a progress message. Default is True.
     """
@@ -27,17 +25,14 @@ def plot_loo(all_models: list[ModelResults],
 
     records = []
     for model in all_models:
-        if model.results.likelihood_pointwise is None:
-            raise ValueError(
-                f"No pointwise likelihood found for model '{model.name}'. "
-                "Re-run sBayes or to generate results with the derived/likelihood group."
-            )
-        loo = az.loo(likelihood_to_arviz(model.results.likelihood_pointwise), var_name="y")
-        records.append({
-            "experiment": model.name,
-            "k": model.results.n_clusters,
-            "elpd_loo": loo.elpd_loo,
-        })
+        for run_id, likelihood in model.likelihoods:
+            loo = az.loo(likelihood, var_name="y")
+            records.append({
+                "experiment": model.name,
+                "k": model.k,
+                "run": run_id,
+                "elpd_loo": loo.elpd
+                })
 
 
     df = pd.DataFrame(records)
@@ -53,7 +48,6 @@ def plot_loo(all_models: list[ModelResults],
                      lw=style.line_width,
                      linestyle=style.line_style, ax=ax)
         ax.set_xlabel("Number of clusters (k)")
-        ax.legend(fontsize=8)
 
     ax.set_ylabel("ELPD LOO")
 
