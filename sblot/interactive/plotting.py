@@ -7,6 +7,7 @@ from sblot.core.utils import padded_range, compute_delaunay, graph_from_delaunay
 from sblot.core.render import COLOR_NEUTRAL
 
 from plotly import express as px, graph_objects as go
+from sblot.core.utils import compute_balanced_geo_ranges
 from sblot.interactive.app_state import AppState
 from sblot.interactive.styles import blank_layout
 from numpy.typing import NDArray
@@ -39,7 +40,7 @@ def initialize_results_map(state: AppState) -> go.Figure:
         lon="x",
         color="cluster",
         hover_data=["name", state.confounder, "posterior_support", "cluster"],
-        projection="natural earth",
+        projection="equirectangular",
         color_discrete_sequence=state.cluster_colors,
     )
 
@@ -48,6 +49,7 @@ def initialize_results_map(state: AppState) -> go.Figure:
         fig_lines = px.line_geo(lat=[None], lon=[None])
         fig = go.Figure(fig.data + fig_lines.data)
 
+    x_range, y_range = compute_balanced_geo_ranges(state.locations)
     fig.update_layout(
         height=600,
         margin=dict(l=0, r=0, b=0, t=0, pad=0),
@@ -55,15 +57,16 @@ def initialize_results_map(state: AppState) -> go.Figure:
             lonaxis=dict(
                 showgrid=True,
                 gridwidth=0.5,
-                range=[*padded_range(state.locations[:, 0])],
+                range=x_range,
                 dtick=5,
             ),
             lataxis=dict(
                 showgrid=True,
                 gridwidth=0.5,
-                range=[*padded_range(state.locations[:, 1])],
+                range=y_range,
                 dtick=5,
             ),
+            projection_scale=1
         ),
     )
 
@@ -96,11 +99,13 @@ def initialize_data_map(state: AppState) -> go.Figure:
         lat="y",
         lon="x",
         hover_data=["name", state.confounder],
-        projection="natural earth",
+        projection="equirectangular",
         size_max=0.1,
     )
 
     fig.update_traces(marker=dict(size=4, color=COLOR_NEUTRAL))
+    x_range, y_range = compute_balanced_geo_ranges(state.locations)
+
     fig.update_layout(
         height=600,
         margin=dict(l=0, r=0, b=0, t=0, pad=0),
@@ -108,15 +113,16 @@ def initialize_data_map(state: AppState) -> go.Figure:
             lonaxis=dict(
                 showgrid=True,
                 gridwidth=0.5,
-                range=[*padded_range(state.locations[:, 0])],
+                range=x_range,
                 dtick=5,
             ),
             lataxis=dict(
                 showgrid=True,
                 gridwidth=0.5,
-                range=[*padded_range(state.locations[:, 1])],
+                range=y_range,
                 dtick=5,
             ),
+            projection_scale=1
         ),
     )
     return fig
@@ -213,7 +219,7 @@ def plot_summary_map(
     state.scatter.hovertemplate = (
         "y=%{lat}<br>x=%{lon}<br>"
         "name=%{customdata[0]}<br>"
-        "family=%{customdata[1]}<br>"
+        "group=%{customdata[1]}<br>"
         "cluster=%{customdata[2]}<br>"
         "posterior_support=%{customdata[3]:.2f}"
     )
@@ -266,7 +272,7 @@ def plot_sample_map(state: AppState, i_sample: int) -> go.Figure:
     state.scatter.hovertemplate = (
         "y=%{lat}<br>x=%{lon}<br>"
         "name=%{customdata[0]}<br>"
-        "family=%{customdata[1]}<br>"
+        "group=%{customdata[1]}<br>"
         "cluster=%{customdata[2]}"
     )
 

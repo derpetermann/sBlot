@@ -8,14 +8,14 @@ config_path: config.yaml
 simulation:
 
     # The number of objects (e.g., languages) to simulate
-    n_objects: 20
+    objects: 20
 
     # The number of clusters to simulate (ground truth)
-    # May differ from n_clusters in config.yaml (inference)
-    n_clusters: 3
+    # May differ from clusters in config.yaml (inference)
+    clusters: 1
 
     # The number of datasets to generate from the prior
-    n_datasets: 100
+    datasets: 1
 
     # Random seed for reproducibility
     seed: 0
@@ -30,9 +30,12 @@ simulation:
     # For categorical features, the key is categorical_<n_states>
     features:
         categorical_2: 5
-        categorical_3: 3
+        categorical_3: 5
 
     # Confounders and number of groups per confounder
     # Must match the confounders defined in config.yaml
     confounders:
-        confounder_1: 3
+        confounder_1: 2
+
+    output:
+        path: ../data

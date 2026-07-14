@@ -230,7 +230,7 @@ def build_data_component(state: AppState) -> html.Div:
                 dcc.Tab(
                     value="group-tab",
                     id="group-tab",
-                    label="Families",
+                    label=f"Groups by confounder {state.confounder}",
                     **all_tab_styles,
                     children=dcc.Graph(id='group-sizes', figure=group_size_graph),
                 ),

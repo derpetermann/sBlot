@@ -53,6 +53,7 @@ def plot_loo(all_models: list[ModelResults],
                      lw=style.line_width,
                      linestyle=style.line_style, ax=ax)
         ax.set_xlabel("Number of clusters (k)")
+        ax.legend(fontsize=8)
 
     ax.set_ylabel("ELPD LOO")
 

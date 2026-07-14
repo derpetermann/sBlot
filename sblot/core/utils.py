@@ -744,3 +744,36 @@ def to_folder_name(name: object ) -> str:
     name = re.sub(r'_+', '_', name)
     name = name.strip('_.')
     return name
+
+
+def compute_balanced_geo_ranges(
+    locations: NDArray[float],
+    target_ratio: float = 2.0,
+) -> tuple[list[float], list[float]]:
+    """Compute x/y ranges with a minimum aspect ratio.
+
+    Ensures the y span is large enough relative to x span
+    to avoid overly thin maps in interactive mode.
+
+    Args:
+        locations: Array of shape (n, 2) with [x, y]
+        target_ratio: Desired width:height ratio (e.g. 2.0 = twice as wide as tall)
+
+    Returns:
+        (lon_range, lat_range)
+    """
+    x_min, x_max = padded_range(locations[:, 0])
+    y_min, y_max = padded_range(locations[:, 1])
+
+    x_span = x_max - x_min
+    y_span = y_max - y_min
+
+    min_y_span = x_span / target_ratio
+
+    if y_span < min_y_span:
+        y_center = (y_min + y_max) / 2
+        y_span = min_y_span
+        y_min = y_center - y_span / 2
+        y_max = y_center + y_span / 2
+
+    return [x_min, x_max], [y_min, y_max]

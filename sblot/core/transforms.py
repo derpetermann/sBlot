@@ -88,6 +88,7 @@ def permute_parameters(results: Results, permutation: NDArray[int]) -> pd.DataFr
 def align_posterior(
     cluster_paths: list[Path],
     stats_paths: list[Path],
+    verbose: bool = False,
 ) -> list[Results]:
     """Align posterior samples across multiple MCMC runs.
 
@@ -97,10 +98,12 @@ def align_posterior(
     Args:
         cluster_paths: Paths to cluster files for one model size, one per run.
         stats_paths: Paths to stats files for one model size, one per run.
+        verbose: If True, print progress message. Default is False.
     Returns:
         List of Results objects with aligned cluster labels, one per run.
     """
-    print("Aligning posterior samples across runs...")
+    if verbose:
+        print("Aligning posterior samples across runs...")
 
 
     # Load all runs without burn-in for alignment

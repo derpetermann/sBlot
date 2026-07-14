@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sblot"
-version = "1.0.0"
-description = "Python library for visualization of sBayes results."
+version = "1.1.0"
+description = "Python library for visualisation of sBayes results."
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [
@@ -50,6 +50,10 @@ loo = [
     "arviz",
     "tables",
 ]
+dev = [
+    "pytest",
+    "pytest-cov",
+]
 all = [
     "sblot[interactive,loo]",
 ]
@@ -68,3 +72,6 @@ exclude = ["build", "test*"]
 [tool.setuptools.package-data]
 "sblot.data.map" = ["*.geojson"]
 "sblot.data.example_configs" = ["*.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
