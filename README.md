@@ -62,7 +62,7 @@ sblot --init my_experiment/
 ### Python script
 
 ```
-from sblot.config_io import load_config
+from sblot.config.config_io import load_config, read_data, read_results
 from sblot.plots.weights import plot_weights_grid
 from sblot.plots.preferences import plot_preferences_grid
 from sblot.plots.pies import plot_pies
@@ -70,8 +70,8 @@ from sblot.plots.map import plot_maps
 from sblot.plots.loo import plot_loo
 
 config = load_config("config_plot.yaml", "config_style.yaml")
-data = config.read_data()
-all_models = list(config.read_results())
+data = read_data(config)
+all_models = list(read_results(config))
 
 for model in all_models:
     plot_weights(model.results, config)

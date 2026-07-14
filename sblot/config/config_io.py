@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import numpy as np
 import os
 import re
 import warnings
 
 from pathlib import Path
-from pandas import read_csv, concat
+from pandas import read_csv
 from pydantic import BaseModel, DirectoryPath, Field, model_validator, PositiveInt, field_validator
 from pydantic_core import PydanticCustomError
 from pydantic_core.core_schema import ValidationInfo
@@ -14,11 +13,15 @@ from pydantic.types import PathType
 from ruamel.yaml import YAML
 from sbayes.load_data import read_features_from_csv, Data
 from sbayes.results import Results
-from sblot.core.utils import fix_relative_path, read_likelihood_for_az
-from sblot.core.transforms import align_posterior
+from sblot.core.utils import fix_relative_path
 from typing import Annotated, Self, Iterator, Literal, NamedTuple, Union, get_args
 
 MapType = Literal["pie", "line", "idw"]
+
+
+class ModelResults(NamedTuple):
+    name: str | None
+    results: Results
 
 class RelativePathType(PathType):
     """Path validator that resolves paths relative to a base directory.
@@ -65,12 +68,6 @@ RelativeFilePath = Annotated[Path, RelativePathType('file')]
 
 RelativeDirectoryPath = Annotated[Path, RelativePathType('dir')]
 """A path to a directory, resolved relative to the config file location. Created if absent."""
-
-class ModelResults(NamedTuple):
-    k: int
-    name: str | None
-    results: Results
-    likelihoods: list[tuple]
 
 
 class BaseConfig(BaseModel, extra='forbid'):
@@ -157,7 +154,6 @@ class ResultsConfig(BaseConfig):
             self.path_out = RelativePathType.fix_path(self.path_out)
         return self
 
-
     @model_validator(mode="after")
     def validate_burn_in(self):
         if not 0.0 < self.burn_in < 1.0:
@@ -176,7 +172,6 @@ class GlobalConfig(BaseConfig):
     n_clusters: int = 0
     """Number of clusters — set at load time from results."""
 
-# Weights plots
 
 class WeightsLabelConfig(BaseConfig):
     """Style configuration for labels in weights plots."""
@@ -631,14 +626,6 @@ class MapIdwConfig(BaseConfig):
 
 class MapConfig(BaseConfig):
     type: Union[Literal["all"], list[MapType], MapType] = "line"
-
-    @field_validator("type", mode="before")
-    @classmethod
-    def expand_all(cls, value):
-        if value == "all":
-            return list(get_args(MapType))
-        return value
-
     """Map type. Either 'pie', 'line' or 'idw'"""
     plot_confounder: str | None = None
     """Add a confounder to the map."""
@@ -665,6 +652,12 @@ class MapConfig(BaseConfig):
     output: MapOutputConfig = Field(default_factory=MapOutputConfig)
     """Config for map output."""
 
+    @field_validator("type", mode="before")
+    @classmethod
+    def expand_all(cls, value):
+        if value == "all":
+            return list(get_args(MapType))
+        return value
 
     @model_validator(mode="after")
     def validate_min_posterior_probability(self):
@@ -708,110 +701,76 @@ class Config(BaseConfig):
     style: StyleConfig
 
 
-    def read_data(self) -> Data:
-        """Read objects, features and confounders from the data files defined in this config.
+def read_data(config: Config) -> Data:
+    """Read objects, features and confounders from the data files defined in config.
 
-        Returns:
-            Tuple of (objects, features, confounders).
-        """
-        confounder_names = find_confounder_names(
-            self.experiment.data.features,
-            self.experiment.data.feature_types,
+    Args:
+        config: Combined plot and style configuration.
+    Returns:
+        Tuple of (objects, features, confounders).
+    """
+    confounder_names = find_confounder_names(
+        config.experiment.data.features,
+        config.experiment.data.feature_types,
+    )
+    return read_features_from_csv(
+        data_path=config.experiment.data.features,
+        feature_types_path=config.experiment.data.feature_types,
+        confounder_names=confounder_names,
+    )
+
+
+def read_results(config: Config) -> Iterator[ModelResults]:
+    """Iterate over all models in the results directory.
+
+    Handles two folder structures:
+    - Flat: path_in contains samples files directly (single model)
+    - Nested: path_in contains subfolders, each with samples files
+
+    Args:
+        config: Combined plot and style configuration.
+    Yields:
+        ModelResults(name, results) for each model found.
+    """
+    path_in = Path(config.experiment.results.path_in)
+
+    # Check if results files are directly in path_in or in subfolders
+    direct_files = sorted(path_in.glob("samples_*.h5"))
+    if direct_files:
+        # Flat structure — single model in path_in
+        model_dirs = [path_in]
+        experiment_name = path_in.parent.name
+    else:
+        # Nested structure — one subfolder per model
+        matched_dirs = [
+            (d, re.search(r'K(\d+)', d.name))
+            for d in path_in.iterdir() if d.is_dir()
+        ]
+        model_dirs = sorted(
+            [d for d, m in matched_dirs if m is not None],
+            key=lambda d: int(re.search(r'K(\d+)', d.name).group(1))
         )
-        return read_features_from_csv(
-            data_path=self.experiment.data.features,
-            feature_types_path=self.experiment.data.feature_types,
-            confounder_names=confounder_names,
+        experiment_name = path_in.name
+
+    if not model_dirs:
+        raise FileNotFoundError(f"No results found in {path_in}.")
+
+    burn_in = config.experiment.results.burn_in
+    thinning = config.experiment.results.thinning
+
+    for model_dir in model_dirs:
+        samples_paths = sorted(model_dir.glob("samples_*.h5"))
+        if not samples_paths:
+            continue
+
+        runs = [
+            Results.from_h5(p, burn_in=burn_in, subsample_interval=thinning)
+            for p in samples_paths
+        ]
+        yield ModelResults(
+            name=experiment_name,
+            results=Results.concatenate(runs),
         )
-
-
-    def read_results(self) -> Iterator[ModelResults]:
-        """Iterate over all models in the results directory.
-
-        Handles two folder structures:
-        - Flat: path_in contains cluster and stats files directly
-        - Nested: path_in contains subfolders, each with cluster and stats files
-
-        Yields:
-            ModelResults(k, name, results) for each model found.
-        """
-
-        path_in = Path(self.experiment.results.path_in)
-
-        # Check if results files are directly in path_in or in subfolders
-        direct_files = sorted(path_in.glob("clusters_*.txt"))
-        if direct_files:
-            # Flat structure — single model in path_in
-            model_dirs = [path_in]
-            experiment_name = path_in.parent.name
-        else:
-            # Nested structure — one subfolder per model
-            model_dirs = sorted(
-                [d for d in path_in.iterdir() if d.is_dir()],
-                key=lambda d: int(re.search(r'K(\d+)', d.name).group(1))
-            )
-            experiment_name = path_in.name
-
-        if not model_dirs:
-            raise FileNotFoundError(f"No results found in {path_in}.")
-
-        for model_dir in model_dirs:
-            cluster_files = sorted(model_dir.glob("clusters_*.txt"))
-            stats_files = sorted(model_dir.glob("stats_*.txt"))
-
-            if not cluster_files:
-                continue
-
-
-            # Align runs in memory
-            all_results = align_posterior(cluster_files, stats_files)
-
-            # Concatenate runs along the samples axis
-            clusters_combined = np.concatenate(
-                [r.clusters for r in all_results], axis=1
-            )
-            parameters_combined = concat(
-                [r.parameters for r in all_results], ignore_index=True
-            )
-
-            # Apply burn-in and thinning
-            burn_in = self.experiment.results.burn_in
-            thinning = self.experiment.results.thinning
-            n_total = clusters_combined.shape[1]
-            burn_in_idx = int(burn_in * n_total)
-            indices = list(range(burn_in_idx, n_total, thinning))
-
-            clusters_combined = clusters_combined[:, indices, :]
-            parameters_combined = parameters_combined.iloc[indices]
-
-            # Read likelihood files if available
-            likelihoods = []
-            if self.experiment.plots.loo is not None:
-                for likelihood_path in sorted(model_dir.glob("likelihood_*.h5")):
-                    # Skip hot chains from MC3 runs — hot chain likelihoods are not valid posterior samples
-                    if ".chain" in likelihood_path.stem:
-                        continue
-                    run_id = int(likelihood_path.stem.rpartition("_")[-1])
-                    try:
-                        likelihoods.append((
-                            run_id,
-                            read_likelihood_for_az(likelihood_path, burn_in)
-                        ))
-                    except Exception as e:
-                        warnings.warn(
-                            f"Error reading '{likelihood_path}'. Skipping.\n{e}"
-                        )
-
-            yield ModelResults(
-                k=clusters_combined.shape[0],
-                name=experiment_name,
-                likelihoods=likelihoods,
-                results=Results(
-                    clusters=clusters_combined,
-                    parameters=parameters_combined,
-                    burn_in=0,
-                )
-            )
 
 
 def load_config(

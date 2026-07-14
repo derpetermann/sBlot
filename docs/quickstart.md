@@ -20,11 +20,11 @@ To use a custom style configuration, also pass a custom `config_style.yaml` file
 
 Users can use the Python API directly to generate only specific plots, inspect intermediate results, or integrate plots into a larger workflow.
 
-    from sblot.config_io import load_config
+    from sblot.config.config_io import load_config, read_data, read_results
 
     config = load_config("config_plot.yaml", "config_style.yaml")
-    data = config.read_data()
-    all_models = list(config.read_results())
+    data = read_data(config)
+    all_models = list(read_results(config))
 
 The configuration is loaded from `config_plot.yaml` and `config_style.yaml`, combining analytical settings and visual style into a single `config` object. The data (objects, features and confounders) and all MCMC results are then read from the paths specified in the `config_plot.yaml` file, with posterior samples aligned across runs and burn-in applied automatically.
 
