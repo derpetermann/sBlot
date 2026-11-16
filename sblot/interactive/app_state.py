@@ -72,7 +72,7 @@ class AppState:
 
     @property
     def clusters(self) -> NDArray[bool] | None:
-        """Posterior cluster samples, shape (n_clusters, n_samples, n_objects)."""
+        """Posterior cluster samples, shape (n_samples, n_clusters, n_objects)."""
         return self._clusters
 
     @clusters.setter
@@ -91,12 +91,12 @@ class AppState:
     @property
     def n_clusters(self) -> int:
         """Number of clusters in the posterior."""
-        return self._clusters.shape[0]
+        return self._clusters.shape[1]
 
     @property
     def n_samples(self) -> int:
         """Number of posterior samples."""
-        return self._clusters.shape[1]
+        return self._clusters.shape[0]
 
     @property
     def n_objects(self) -> int:

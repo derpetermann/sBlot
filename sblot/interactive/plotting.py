@@ -144,7 +144,7 @@ def plot_trace(state: AppState, interval: int = 2) -> go.Figure:
         A Plotly line figure with one trace per cluster.
     """
     # Thin samples and compute cluster sizes — shape: (n_clusters, n_thinned_samples)
-    sizes_np = np.sum(state.clusters[:, ::interval, :], axis=2)
+    sizes_np = np.sum(state.clusters[::interval], axis=2).T
 
     # Convert to long-form DataFrame for plotly express
     sizes_df = pd.DataFrame(
@@ -199,7 +199,7 @@ def plot_summary_map(
 
     # Compute mean posterior probability per cluster per object
     # shape: (n_clusters, n_objects)
-    cluster_posterior = np.mean(state.clusters[:, i_start:i_end, :], axis=1)
+    cluster_posterior = np.mean(state.clusters[i_start:i_end], axis=0)
     summary_clusters = cluster_posterior > posterior_threshold
 
     # Assign objects to clusters or mark as unassigned
@@ -256,15 +256,15 @@ def plot_sample_map(state: AppState, i_sample: int) -> go.Figure:
         The updated Plotly figure stored in state.fig.
     """
     # Assign objects to clusters or mark as unassigned
-    any_cluster = np.any(state.clusters[:, i_sample], axis=0)
+    any_cluster = np.any(state.clusters[i_sample], axis=0)
     state.object_data.loc[any_cluster, "cluster"] = (
-        np.nonzero(state.clusters[:, i_sample].T)[1]
+        np.nonzero(state.clusters[i_sample].T)[1]
     )
     state.object_data.loc[~any_cluster, "cluster"] = -1
     state.scatter.customdata[~any_cluster, 2] = ""
 
     # Update Gabriel graph lines and hover data per cluster
-    for i, c in enumerate(state.clusters[:, i_sample, :]):
+    for i, c in enumerate(state.clusters[i_sample]):
         state.lines[i].lon, state.lines[i].lat = cluster_to_graph(state.locations[c])
         state.lines[i].line.color = state.cluster_colors[i]
         state.scatter.customdata[c, 2] = i

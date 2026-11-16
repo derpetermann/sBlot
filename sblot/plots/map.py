@@ -229,21 +229,22 @@ def get_cluster_graph(
     """Compute graphs for all clusters.
 
     Args:
-        clusters: Cluster samples.
+        clusters: Cluster samples, shape (n_samples, n_clusters, n_objects).
         locations_map_crs: Object locations in map CRS.
         config: Combined plot and style configuration.
     Returns:
         List of (in_cluster, lines, line_weights) tuples per cluster.
     """
     experiment = config.experiment.plots.map
+    clusters = np.asarray(clusters)
     return [
         clusters_to_graph(
-            np.asarray(c),
+            clusters[:, i],
             locations_map_crs,
             experiment.line.graph,
             experiment.min_posterior_probability,
         )
-        for c in clusters
+        for i in range(clusters.shape[1])
     ]
 
 
@@ -335,7 +336,7 @@ def get_dominant_cluster(
 
     # Compute posterior assignment probability per cluster
     # shape: (n_clusters, n_objects)
-    cluster_assignment_prob = np.array([get_cluster_probability(c) for c in clusters])
+    cluster_assignment_prob = get_cluster_probability(clusters)
 
     # Find the dominant cluster and its color
     dominant_cluster_idx = np.argmax(cluster_assignment_prob, axis=0)
@@ -781,7 +782,7 @@ def render_line_map(
     )
 
     if single_cluster_id is not None:
-        clusters = results.clusters[single_cluster_id:single_cluster_id + 1]
+        clusters = results.clusters[:, single_cluster_id:single_cluster_id + 1]
         cluster_colors = cluster_colors[single_cluster_id:single_cluster_id + 1]
     else:
         clusters = results.clusters
@@ -789,7 +790,7 @@ def render_line_map(
     # Get per-object cluster with max posterior assignment probability and its color
     in_cluster = get_dominant_cluster(clusters, config)
 
-    cluster_prob_matrix = np.array([get_cluster_probability(c) for c in clusters])
+    cluster_prob_matrix = get_cluster_probability(clusters)
     max_cluster_prob = cluster_prob_matrix[in_cluster]
 
     in_any_cluster = np.any(in_cluster, axis=0)
@@ -860,13 +861,13 @@ def render_pie_map(
     )
 
     if single_cluster_id is not None:
-        clusters = results.clusters[single_cluster_id:single_cluster_id + 1]
+        clusters = results.clusters[:, single_cluster_id:single_cluster_id + 1]
         cluster_colors = cluster_colors[single_cluster_id:single_cluster_id + 1]
     else:
         clusters = results.clusters
 
     in_cluster = get_dominant_cluster(clusters, config)
-    cluster_prob_matrix = np.array([get_cluster_probability(c) for c in clusters])
+    cluster_prob_matrix = get_cluster_probability(clusters)
     objects_in_cluster_indices = np.where(np.any(in_cluster, axis=0))[0]
 
     # Compute fixed pie radius in data units
@@ -970,7 +971,7 @@ def render_idw_map(
         custom_colors=config.style.global_.cluster_colors or None,
     )
     if single_cluster_id is not None:
-        clusters = results.clusters[single_cluster_id:single_cluster_id + 1]
+        clusters = results.clusters[:, single_cluster_id:single_cluster_id + 1]
         cluster_colors = cluster_colors[single_cluster_id:single_cluster_id + 1]
     else:
         clusters = results.clusters

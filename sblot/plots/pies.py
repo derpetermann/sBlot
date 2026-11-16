@@ -34,12 +34,10 @@ def plot_pies(
     global_style = config.style.global_
 
     clusters = np.array(results.clusters)
-    n_clusters = clusters.shape[0]
-    n_objects = clusters.shape[2]
-    n_samples = clusters.shape[1]
+    n_samples, n_clusters, n_objects = clusters.shape
 
     # Sum cluster assignments over samples — shape: (n_clusters, n_objects)
-    samples_per_cluster = np.sum(clusters, axis=1)
+    samples_per_cluster = np.sum(clusters, axis=0)
 
     # Resolve cluster colors — cached, guaranteed consistent across plots
     cluster_colors = get_cluster_colors(

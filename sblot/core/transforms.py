@@ -18,10 +18,12 @@ def get_cluster_probability(cluster: NDArray) -> NDArray[float]:
     float in [0, 1] and output is the mean assignment probability across samples.
 
     Args:
-        cluster: Array of shape (n_samples, n_objects), either boolean (hard
+        cluster: Array of shape (n_samples, n_objects), or (n_samples, n_clusters,
+                 n_objects) for several clusters at once, either boolean (hard
                  assignment) or float in [0, 1] (soft assignment).
     Returns:
-        Array of shape (n_objects,) with values in [0, 1].
+        Array of shape (n_objects,), or (n_clusters, n_objects), with values in
+        [0, 1].
     """
     return np.mean(np.asarray(cluster), axis=0)
 
@@ -113,13 +115,13 @@ def align_posterior(
     ]
 
     # Compute mean cluster assignments per run
-    mean_clusters = [np.mean(r.clusters, axis=1) for r in all_results]
+    mean_clusters = [np.mean(r.clusters, axis=0) for r in all_results]
 
     # Align all runs to the first run as reference
     for i in range(1, len(all_results)):
         d = cluster_agreement(mean_clusters[0], mean_clusters[i])
         _, perm = linear_sum_assignment(-d)
-        all_results[i].clusters = all_results[i].clusters[perm]
+        all_results[i].clusters = all_results[i].clusters[:, perm]
         all_results[i].parameters = permute_parameters(all_results[i], perm)
 
     return all_results
