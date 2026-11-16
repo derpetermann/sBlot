@@ -22,6 +22,8 @@ MapType = Literal["pie", "line", "idw"]
 class ModelResults(NamedTuple):
     name: str | None
     results: Results
+    run: str | None = None
+    """Run label (e.g. 'run_0') if runs are kept separate, None if combined."""
 
 class RelativePathType(PathType):
     """Path validator that resolves paths relative to a base directory.
@@ -153,6 +155,10 @@ class ResultsConfig(BaseConfig):
         else:
             self.path_out = RelativePathType.fix_path(self.path_out)
         return self
+
+    combine_runs: bool = True
+    """Concatenate all runs of a model into one result. If False, each run is
+    plotted separately and saved to its own subfolder (e.g. path_out/run_0)."""
 
     @model_validator(mode="after")
     def validate_burn_in(self):
@@ -729,8 +735,11 @@ def read_results(config: Config) -> Iterator[ModelResults]:
 
     Args:
         config: Combined plot and style configuration.
+    Runs within a model folder are concatenated unless results.combine_runs
+    is False, in which case one ModelResults is yielded per run.
+
     Yields:
-        ModelResults(name, results) for each model found.
+        ModelResults(name, results, run) for each model (or run) found.
     """
     path_in = Path(config.experiment.results.path_in)
 
@@ -767,10 +776,19 @@ def read_results(config: Config) -> Iterator[ModelResults]:
             Results.from_h5(p, burn_in=burn_in, subsample_interval=thinning)
             for p in samples_paths
         ]
-        yield ModelResults(
-            name=experiment_name,
-            results=Results.concatenate(runs),
-        )
+        if config.experiment.results.combine_runs:
+            yield ModelResults(
+                name=experiment_name,
+                # Cluster labels are arbitrary per run, so align them before merging
+                results=Results.concatenate(runs, align_clusters=True),
+            )
+        else:
+            for path, run in zip(samples_paths, runs):
+                yield ModelResults(
+                    name=experiment_name,
+                    results=run,
+                    run=f"run_{path.stem.removeprefix('samples_')}",
+                )
 
 
 def load_config(

@@ -40,13 +40,13 @@ def main(
 
     for model in all_models:
         if enabled("weights"):
-            plot_weights(model.results, config)
+            plot_weights(model.results, config, model=model.run)
         if enabled("preferences"):
-            plot_preferences(model.results, config)
+            plot_preferences(model.results, config, model=model.run)
         if enabled("pies"):
-            plot_pies(model.results, data, config)
+            plot_pies(model.results, data, config, model=model.run)
         if enabled("map"):
-            plot_maps(model.results, data, config)
+            plot_maps(model.results, data, config, model=model.run)
 
     if enabled("loo"):
         plot_loo(all_models, config)

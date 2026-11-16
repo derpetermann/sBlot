@@ -32,6 +32,8 @@ results:
   burn_in: 0.2
   # Keep every nth sample to reduce memory usage (1 = keep all samples)
   thinning: 1
+  # Concatenate all runs of a model (true) or plot each run separately (false)
+  combine_runs: true
 
 # ------------------------------------------------------------
 # Plot settings
