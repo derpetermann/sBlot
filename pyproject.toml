@@ -7,7 +7,7 @@ name = "sblot"
 version = "1.1.0"
 description = "Python library for visualisation of sBayes results."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 authors = [
     {name = "Nico Neureiter", email = "nico.neureiter@gmail.com"},
     {name = "Peter Ranacher", email = "peter.ranacher@gmail.com"},
