@@ -14,7 +14,6 @@ from matplotlib.transforms import Bbox
 
 from matplotlib.patches import Patch, Rectangle, Wedge
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-from numba.core.types import Literal
 from numpy.typing import NDArray
 from sbayes.results import Results
 from sbayes.load_data import Data, Objects
@@ -702,6 +701,10 @@ def add_index_table(
             objects_id.append(obj_id)
             objects_name.append(obj_name)
             objects_color.append("black")
+
+    if not objects_name:
+        logging.warning("No objects to show in the index table (none is assigned to a cluster).")
+        return
 
     n_col = legend.index_table.n_columns
     n_row = ceil(len(objects_name) / n_col)
