@@ -1,4 +1,3 @@
-import arviz as az
 import colorsys
 import geopandas as gpd
 import math
@@ -566,6 +565,10 @@ def read_likelihood_for_az(likelihood_path: Path | str, burnin: float) -> xr.Dat
     Reads a likelihood HDF5 file and converts it into an ArviZ-compatible DataTree.
     Compatible with ArviZ 1.0.0+ / DataTree architecture.
     """
+
+    # Only import arviz on demand to keep it an optional dependency
+    import arviz as az
+
     with open_file(likelihood_path, mode='r') as likelihood_table:
         likelihood_np = likelihood_table.root.likelihood[:]
 
