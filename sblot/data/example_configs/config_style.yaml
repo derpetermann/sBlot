@@ -319,6 +319,24 @@ map:
       # Too large and interior points may be excluded from the shape.
       shape: 20
 
+    # Style settings for object polygons, e.g. language areas.
+    # Only used if polygons is set in the data section of config_plot.yaml.
+    # Polygons are filled with the color of the dominant cluster
+    # (IDW maps: outlines only).
+    polygons:
+      # Fill opacity of polygons in a cluster:
+      # "frequency" = opacity scales with posterior assignment probability
+      # fixed float = fixed opacity, e.g., 0.5
+      alpha: frequency
+      # Maximum fill opacity when alpha is "frequency"
+      max_alpha: 0.6
+      # Fill color of polygons that are not in a cluster. "none" = outline only
+      color: none
+      # Outline color of all polygons
+      outline_color: grey
+      # Outline width of all polygons
+      outline_width: 0.3
+
     # Visual style for base map layers
     basemap:
       # Background color of the map axes, visible in ocean and sea areas

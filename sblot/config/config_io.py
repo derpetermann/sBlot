@@ -131,6 +131,13 @@ class DataConfig(BaseConfig):
     projection: str = "epsg:4326"
     """CRS of the input data as a PROJ string or EPSG code."""
 
+    polygons: RelativeFilePath | None = None
+    """Optional GeoJSON file with a (multi-)polygon per object, e.g. language areas.
+    None = objects are only shown as points."""
+
+    polygon_id: str = "glottocode"
+    """GeoJSON feature property that is matched against the object `id` column."""
+
 
 class ResultsConfig(BaseConfig):
     """Base class for results config classes."""
@@ -148,6 +155,10 @@ class ResultsConfig(BaseConfig):
     thinning: PositiveInt = 1
     """Keep every nth sample to reduce memory usage (1 = keep all samples)."""
 
+    combine_runs: bool = True
+    """Concatenate all runs of a model into one result. If False, each run is
+    plotted separately and saved to its own subfolder (e.g. path_out/run_0)."""
+
     @model_validator(mode="after")
     def set_default_path_out(self):
         if self.path_out is None:
@@ -155,10 +166,6 @@ class ResultsConfig(BaseConfig):
         else:
             self.path_out = RelativePathType.fix_path(self.path_out)
         return self
-
-    combine_runs: bool = True
-    """Concatenate all runs of a model into one result. If False, each run is
-    plotted separately and saved to its own subfolder (e.g. path_out/run_0)."""
 
     @model_validator(mode="after")
     def validate_burn_in(self):
@@ -490,12 +497,27 @@ class MapGraphicsConfounderConfig(BaseConfig):
     Larger values produce tighter, more concave shapes that follow the point distribution more closely."""
 
 
+class MapGraphicPolygonsConfig(BaseConfig):
+    """Visual style for object polygons (only used if data.polygons is set)."""
+    alpha: str | float = "frequency"
+    """Fill opacity of polygons in a cluster. 'frequency' = scale by posterior frequency, or fixed float."""
+    max_alpha: float = 0.6
+    """Maximum fill opacity when alpha is 'frequency'."""
+    color: str = "none"
+    """Fill color of polygons that are not in a cluster. 'none' = outline only."""
+    outline_color: str = "grey"
+    """Outline color of all polygons."""
+    outline_width: float = 0.3
+    """Outline width of all polygons."""
+
+
 class MapGraphicsConfig(BaseConfig):
     """Configuration for map graphics."""
     basemap: MapGraphicBaseMapConfig = Field(default_factory=MapGraphicBaseMapConfig)
     objects: MapGraphicObjectsConfig = Field(default_factory=MapGraphicObjectsConfig)
     clusters: MapGraphicClusterConfig = Field(default_factory=MapGraphicClusterConfig)
     confounders: MapGraphicsConfounderConfig = Field(default_factory=MapGraphicsConfounderConfig)
+    polygons: MapGraphicPolygonsConfig = Field(default_factory=MapGraphicPolygonsConfig)
 
 
 class MapOutputConfig(BaseConfig):

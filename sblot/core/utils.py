@@ -15,7 +15,7 @@ from pathlib import Path
 from scipy.spatial import Delaunay, cKDTree
 from scipy.sparse import csr_matrix
 from shapely import polygonize, unary_union
-from shapely.geometry import LineString, box, Polygon
+from shapely.geometry import LineString, MultiPolygon, box, Polygon
 from shapely.geometry.base import BaseGeometry
 from shapely.prepared import prep
 from tables import open_file
@@ -763,3 +763,25 @@ def compute_balanced_geo_ranges(
         y_max = y_center + y_span / 2
 
     return [x_min, x_max], [y_min, y_max]
+
+
+def polygonal_part(geom: BaseGeometry | None) -> Polygon | MultiPolygon | None:
+    """Return only the polygonal part of a geometry, e.g. drop lines from a GeometryCollection.
+
+    Args:
+        geom: Any shapely geometry or None.
+    Returns:
+        A Polygon or MultiPolygon, or None if the geometry contains no polygons.
+    """
+    if geom is None or geom.geom_type in ("Polygon", "MultiPolygon"):
+        return geom
+    if geom.geom_type == "GeometryCollection":
+        parts = []
+        for g in geom.geoms:
+            if g.geom_type == "Polygon":
+                parts.append(g)
+            elif g.geom_type == "MultiPolygon":
+                parts.extend(g.geoms)
+        return MultiPolygon(parts) if parts else None
+    return None
+

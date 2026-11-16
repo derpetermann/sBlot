@@ -46,6 +46,11 @@ There are three types of maps:
     padding: 2px;">An IDW map of an sBayes language analysis with two clusters including an index table.</div>
    </div>
 
+Optionally, objects can be shown as polygons (e.g. language areas) in addition to points.
+Set `polygons` in the `data` section of `config_plot.yaml` to a GeoJSON file with one
+(multi-)polygon per object. Each polygon is filled with the color of the object's dominant
+cluster, with opacity scaled by the posterior probability. On IDW maps only the outlines are drawn.
+
 For pie and line maps, users can control which objects appear on the map using
 `min_posterior_probability` in `config_plot.yaml`. Objects below the threshold
 are excluded from the map. To add separate maps for each cluster, set

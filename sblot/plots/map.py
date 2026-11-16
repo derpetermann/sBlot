@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 import warnings
 
+from functools import lru_cache
+from pathlib import Path
 from antimeridian import fix_polygon, fix_multi_polygon, FixWindingWarning
 from itertools import compress
 from math import ceil
@@ -21,10 +23,11 @@ from sblot.config.config_io import Config
 from sblot.core.render import style_axes, make_likelihood_legend, annotate_label
 from sblot.core.utils import (reproject_locations, compute_extent, Extent,
                               get_cluster_colors, lighten_color, compute_alpha_shape, compute_idw_grid,
-                              to_folder_name)
+                              to_folder_name, polygonal_part)
 from sblot.core.transforms import get_cluster_probability, clusters_to_graph
 from shapely import BufferCapStyle, BufferJoinStyle, unary_union, Point
 from shapely.geometry import Polygon, box
+from shapely.geometry.base import BaseGeometry
 from shapely.plotting import plot_polygon
 import pyproj
 from typing import Literal
@@ -51,6 +54,39 @@ def get_map_clipbox(map_proj, world_crs):
     clip_box = gpd.GeoSeries([clip_box_1, clip_box_2], crs=world_crs)
 
     return clip_box
+
+def fix_antimeridian(geom: BaseGeometry) -> BaseGeometry:
+    """Split a lon/lat (multi-)polygon at the anti-meridian; keep it unchanged if that fails."""
+    try:
+        if geom.geom_type == 'Polygon':
+            return fix_polygon(geom)
+        return fix_multi_polygon(geom)
+    except ValueError:
+        # e.g. degenerate rings with fewer than 4 coordinates
+        return geom
+
+
+def project_polygons(polygons: gpd.GeoDataFrame, map_proj: str) -> gpd.GeoDataFrame:
+    """Fix anti-meridian crossings, clip to the map's longitude range and reproject.
+
+    Args:
+        polygons: Polygons in a geographic CRS (lon/lat).
+        map_proj: CRS for map rendering as a PROJ string or EPSG code.
+    Returns:
+        Polygons in the map CRS.
+    """
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', category=FixWindingWarning)
+        polygons.geometry = polygons.geometry.apply(fix_antimeridian)
+
+    # Make sure polygon lines don't wrap around
+    clipbox = get_map_clipbox(pyproj.CRS(map_proj), polygons.crs)
+    polygons = polygons.clip(clipbox)
+
+    polygons = polygons.to_crs(map_proj)
+    polygons.geometry = polygons.geometry.buffer(0)
+    return polygons
+
 
 def add_basemap_polygon(
     config: Config,
@@ -85,19 +121,7 @@ def add_basemap_polygon(
     else:
         polygons = gpd.read_file(geo.basemap.polygon)
 
-    with warnings.catch_warnings():
-        warnings.filterwarnings('ignore', category=FixWindingWarning)
-        polygons.geometry = polygons.geometry.apply(
-            lambda geom: fix_polygon(geom) if geom.geom_type == 'Polygon'
-            else fix_multi_polygon(geom)
-        )
-
-    # Make sure polygon lines don't wrap around
-    clipbox = get_map_clipbox(pyproj.CRS(map_proj), polygons.crs)
-    polygons = polygons.clip(clipbox)
-
-    polygons = polygons.to_crs(map_proj)
-    polygons.geometry = polygons.geometry.buffer(0)
+    polygons = project_polygons(polygons, map_proj)
     polygons = gpd.clip(polygons, bbox)
 
     polygons.plot(
@@ -507,6 +531,114 @@ def add_labels(
             ax=ax,
             fontsize=graphics.objects.font_size,
         )
+
+@lru_cache(maxsize=4)
+def _read_object_polygons(
+    path: Path, id_column: str, map_proj: str, object_ids: tuple[str, ...]
+) -> gpd.GeoSeries:
+    """Read the polygons of the given objects, merged per id and reprojected to the map CRS (cached)."""
+    polygons = gpd.read_file(path)
+    if id_column not in polygons.columns:
+        raise ValueError(
+            f"Polygon file {path} has no property '{id_column}'. "
+            f"Set data.polygon_id to one of: {', '.join(map(str, polygons.columns.drop('geometry')))}."
+        )
+    polygons[id_column] = polygons[id_column].astype(str)
+    polygons = polygons[polygons[id_column].isin(object_ids)].copy()
+    polygons.geometry = polygons.geometry.apply(polygonal_part)
+    polygons = polygons[polygons.geometry.notna() & ~polygons.geometry.is_empty]
+
+    polygons = project_polygons(polygons, map_proj)
+    return polygons.dissolve(by=id_column).geometry
+
+
+def load_object_polygons(objects: Objects, config: Config) -> gpd.GeoSeries | None:
+    """Load the object polygons configured in data.polygons.
+
+    Args:
+        objects: Objects whose ids are matched against the polygon ids.
+        config: Combined plot and style configuration.
+    Returns:
+        Polygons in the map CRS, one entry per object in object order (None where
+        an object has no polygon), or None if no polygon file is configured.
+    """
+    data = config.experiment.data
+    if data.polygons is None:
+        return None
+
+    map_proj = config.style.map.geo.resolve_projection(data.projection)
+    object_ids = tuple(str(i) for i in objects.id)
+    polygons = _read_object_polygons(data.polygons, data.polygon_id, map_proj, object_ids)
+    polygons = polygons.reindex(object_ids)
+
+    missing = tuple(polygons.index[polygons.isna()])
+    if missing:
+        _warn_missing_polygons(data.polygons.name, len(objects), missing)
+    return polygons
+
+
+@lru_cache(maxsize=None)
+def _warn_missing_polygons(filename: str, n_objects: int, missing: tuple[str, ...]) -> None:
+    """Warn about objects without polygon (once per file and set of objects)."""
+    logging.warning(
+        f"No polygon for {len(missing)} of {n_objects} objects in {filename} "
+        f"(shown as points only): {', '.join(missing)}"
+    )
+
+
+def add_object_polygons(
+    polygons: gpd.GeoSeries,
+    clusters: NDArray[bool],
+    cluster_colors: list[str],
+    config: Config,
+    ax: plt.Axes,
+    fill: bool = True,
+    z_order: float = 0.5,
+) -> None:
+    """Draw object polygons, filled with the color of their dominant cluster.
+
+    Args:
+        polygons: Polygons in map CRS, one entry per object (None = no polygon).
+        clusters: Cluster samples of the clusters shown on the map.
+        cluster_colors: One color per cluster in `clusters`.
+        config: Combined plot and style configuration.
+        ax: Matplotlib axis to draw on.
+        fill: If False, only draw outlines (e.g. on top of an IDW map).
+        z_order: Drawing order. Default is above the base map and confounder
+            shapes, below objects, lines and pies.
+    """
+    style = config.style.map.graphics.polygons
+
+    in_cluster = get_dominant_cluster(clusters, config)
+    cluster_prob = get_cluster_probability(clusters)
+    in_any_cluster = in_cluster.any(axis=0)
+    dominant = np.argmax(cluster_prob, axis=0)
+    dominant_prob = cluster_prob[dominant, np.arange(cluster_prob.shape[1])]
+
+    if style.alpha == "frequency":
+        alpha = dominant_prob * style.max_alpha
+    else:
+        alpha = np.full(len(dominant_prob), float(style.alpha))
+
+    no_cluster_color = colors.to_rgba(style.color)
+    facecolors = [
+        colors.to_rgba(cluster_colors[dominant[i]], alpha[i]) if fill and in_any_cluster[i]
+        else (no_cluster_color if fill else (0, 0, 0, 0))
+        for i in range(len(polygons))
+    ]
+
+    has_polygon = polygons.notna().to_numpy()
+    if not has_polygon.any():
+        return
+
+    gpd.GeoSeries(polygons[has_polygon].to_numpy()).plot(
+        ax=ax,
+        facecolor=list(compress(facecolors, has_polygon)),
+        edgecolor=style.outline_color,
+        linewidth=style.outline_width,
+        zorder=z_order,
+    )
+
 
 def add_confounder_shapes(
     confounder: str,
@@ -1126,6 +1258,19 @@ def plot_map(
         )
     else:
         raise ValueError(f"Unknown map type: {map_type}")
+
+    # Add object polygons (e.g. language areas)
+    polygons = load_object_polygons(objects, config)
+    if polygons is not None:
+        if single_cluster_id is not None:
+            shown_clusters = results.clusters[:, single_cluster_id:single_cluster_id + 1]
+        else:
+            shown_clusters = results.clusters
+        add_object_polygons(
+            polygons, shown_clusters, cluster_colors, config, ax,
+            fill=map_type != "idw",
+            z_order=0.5 if map_type != "idw" else 1.5,
+        )
 
     # Add language labels
     if experiment.plots.map.labels in ('all', 'in_cluster'):

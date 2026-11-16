@@ -16,6 +16,11 @@ data:
   # Coordinate reference system of the input data as a PROJ string or EPSG code
   # May differ from map_projection in config_style.yaml
   projection: "epsg:4326"
+  # Optional GeoJSON file with a (multi-)polygon per object, e.g. language areas
+  # Polygons are shown on maps in addition to the points. null = no polygons
+  polygons: null
+  # GeoJSON feature property matched against the id column of the features CSV
+  polygon_id: glottocode
 
 # ------------------------------------------------------------
 # Results settings

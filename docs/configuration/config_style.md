@@ -242,6 +242,7 @@ Controls the visual appearance of objects, clusters, confounders and the base ma
 | `objects`     | dict | —       | Style settings for all objects on the map  |
 | `clusters`    | dict | —       | Style settings for cluster assignments     |
 | `confounders` | dict | —       | Style settings for confounder alpha shapes |
+| `polygons`    | dict | —       | Style settings for object polygons         |
 | `basemap`     | dict | —       | Style settings for base map layers         |
 
 #### `map.graphics.objects`
@@ -278,6 +279,18 @@ Controls the appearance of confounder alpha shapes on the map.
 | `color`  | list[string] | `[]`    | Colors for each confounder group. Empty = auto-generate colors |
 | `buffer` | float        | `0.5`   | Buffer distance around alpha shapes in map CRS units           |
 | `shape`  | float        | `20`    | Alpha shape concavity parameter. Larger = tighter shape        |
+
+#### `map.graphics.polygons`
+Controls the appearance of object polygons (only used if `data.polygons` is set in `config_plot.yaml`).
+Polygons are filled with the color of the object's dominant cluster. On IDW maps only the outlines are drawn.
+
+| Key             | Type          | Default     | Description                                                                              |
+|-----------------|---------------|-------------|------------------------------------------------------------------------------------------|
+| `alpha`         | string\|float | `frequency` | Fill opacity: `frequency` = scale by posterior probability, or fixed float e.g. `0.5`    |
+| `max_alpha`     | float         | `0.6`       | Maximum fill opacity when `alpha` is `frequency`                                         |
+| `color`         | string        | `none`      | Fill color of polygons that are not in a cluster. `none` = outline only                 |
+| `outline_color` | string        | `grey`      | Outline color of all polygons                                                            |
+| `outline_width` | float         | `0.3`       | Outline width of all polygons                                                            |
 
 #### `map.graphics.basemap`
 Controls the visual appearance of base map layers.

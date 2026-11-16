@@ -30,8 +30,15 @@ Specify the input data used in the analysis, including feature definitions and s
 | `features`      | string | *required*   | Path to the features CSV file                                                                   |
 | `feature_types` | string | *required*   | Path to the `feature_types.yaml` file defining the type of each feature                         |
 | `projection`    | string | `epsg:4326`  | Coordinate reference system (CRS) of the input data (PROJ string or EPSG). For `map` plots only |
+| `polygons`      | string | `null`       | Optional GeoJSON file with a (multi-)polygon per object, e.g. language areas. For `map` plots only |
+| `polygon_id`    | string | `glottocode` | GeoJSON feature property that is matched against the `id` column of the features CSV          |
 
 Note that the projection might differ from the `map_projection` in `config_style.yaml`.
+
+Polygons are expected in longitude/latitude (as required by the GeoJSON standard),
+regardless of `projection`. Several features with the same id are merged, and only
+the polygonal parts of `GeometryCollection`s are used. Objects without a polygon are
+shown as points only.
 
 ## Plots (`plots`)
 
