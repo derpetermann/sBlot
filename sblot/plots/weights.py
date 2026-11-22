@@ -9,7 +9,7 @@ from numpy.typing import NDArray
 from sbayes.results import Results
 from sblot.config.config_io import Config
 from sblot.core.render import kdeplot_with_mean, PREF_COLOR_MAP
-from sblot.core.utils import get_corner_points, to_folder_name
+from sblot.core.utils import get_corner_points, to_folder_name, run_suffix
 
 
 
@@ -139,6 +139,7 @@ def plot_weights(
     results: Results,
     config: Config,
     model: str | None = None,
+    run: str | None = None,
     verbose: bool = True
 ) -> None:
     """Plot all weight simplices arranged in a grid and save to file.
@@ -150,6 +151,7 @@ def plot_weights(
         results: MCMC results containing weight samples for each feature.
         config: Combined plot and style configuration.
         model: sBayes model name, e.g., K1 (optional).
+        run: Run id appended to the file names, e.g. '0' (optional).
         verbose: If True, print a progress message. Default is True.
     """
     if verbose:
@@ -213,7 +215,7 @@ def plot_weights(
     path_out.mkdir(parents=True, exist_ok=True)
 
     fig.savefig(
-        path_out / f'weights_grid_K{results.n_clusters}.{global_style.format}',
+        path_out / f'weights_grid_K{results.n_clusters}{run_suffix(run)}.{global_style.format}',
         bbox_inches='tight',
         dpi=global_style.resolution,
         format=global_style.format,

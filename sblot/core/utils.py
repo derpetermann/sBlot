@@ -785,3 +785,8 @@ def polygonal_part(geom: BaseGeometry | None) -> Polygon | MultiPolygon | None:
         return MultiPolygon(parts) if parts else None
     return None
 
+
+
+def run_suffix(run: str | None) -> str:
+    """File name suffix for a separately plotted run ('' if runs are combined)."""
+    return "" if run is None else f"_{run}"

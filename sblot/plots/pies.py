@@ -5,7 +5,7 @@ from matplotlib import pyplot as plt
 from sbayes.load_data import Data
 from sbayes.results import Results
 from sblot.config.config_io import Config
-from sblot.core.utils import get_cluster_colors, to_folder_name
+from sblot.core.utils import get_cluster_colors, to_folder_name, run_suffix
 
 
 def plot_pies(
@@ -13,6 +13,7 @@ def plot_pies(
     data: Data,
     config: Config,
     model: str | None = None,
+    run: str | None = None,
     verbose: bool = True
 ) -> None:
     """Plot cluster membership as pie charts, one per object.
@@ -25,6 +26,7 @@ def plot_pies(
         data: Tuple of (objects, features, confounders).
         config: Combined plot and style configuration.
         model: sBayes model name, e.g., K1 (optional).
+        run: Run id appended to the file names, e.g. '0' (optional).
         verbose: If true, print a progress message. Default is True.
     """
     if verbose:
@@ -117,7 +119,7 @@ def plot_pies(
     path_out.mkdir(parents=True, exist_ok=True)
 
     fig.savefig(
-        path_out / f'pie_plot_K{results.n_clusters}.{global_style.format}',
+        path_out / f'pie_plot_K{results.n_clusters}{run_suffix(run)}.{global_style.format}',
         bbox_inches='tight',
         dpi=global_style.resolution,
         format=global_style.format,

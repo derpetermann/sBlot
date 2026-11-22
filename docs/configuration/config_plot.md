@@ -19,7 +19,7 @@ Specify the input and output paths for an `sBayes` run, along with parameters co
 | `path_out` | string | `{path_in}_plots` | Directory where generated plots will be saved                            |
 | `burn_in`  | float  | `0.2`             | Fraction of samples to discard as burn-in (0.0–1.0)                      |
 | `thinning` | int    | `1`               | Keep every *n*th sample to reduce memory usage                           |
-| `combine_runs` | bool | `true`          | Concatenate all runs of a model; if `false`, each run is plotted into its own subfolder (`{path_out}/run_<i>`) |
+| `combine_runs` | bool | `true`          | Concatenate all runs of a model; if `false`, each run is plotted separately with the run id appended to the file names (e.g. `pie_plot_K3_0.pdf`) |
 
 
 ## Data (`data`)

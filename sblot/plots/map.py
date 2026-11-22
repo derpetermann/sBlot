@@ -23,7 +23,7 @@ from sblot.config.config_io import Config
 from sblot.core.render import style_axes, make_likelihood_legend, annotate_label
 from sblot.core.utils import (reproject_locations, compute_extent, Extent,
                               get_cluster_colors, lighten_color, compute_alpha_shape, compute_idw_grid,
-                              to_folder_name, polygonal_part)
+                              to_folder_name, polygonal_part, run_suffix)
 from sblot.core.transforms import get_cluster_probability, clusters_to_graph
 from shapely import BufferCapStyle, BufferJoinStyle, unary_union, Point
 from shapely.geometry import Polygon, box
@@ -1192,7 +1192,8 @@ def plot_map(
     config: Config,
     model: str | None = None,
     map_type: Literal['pie', 'line', 'idw'] = 'line',
-    single_cluster_id: None | int = None
+    single_cluster_id: None | int = None,
+    run: str | None = None,
 ) -> None:
     """Plot the posterior map.
 
@@ -1205,6 +1206,7 @@ def plot_map(
         model: sBayes model name, e.g., K1 (optional).
         map_type: Type of map to create, either 'pie', 'line' or 'idw'.
         single_cluster_id: ID of a single cluster. If provided, plot a single cluster instead of all clusters. Defaults to None.
+        run: Run id appended to the file names, e.g. '0' (optional).
     """
     objects, features, confounders = data
     experiment = config.experiment
@@ -1313,7 +1315,7 @@ def plot_map(
 
     path_out.mkdir(parents=True, exist_ok=True)
     fig.savefig(
-        path_out / f'{map_name}_K{results.n_clusters}.{global_.format}',
+        path_out / f'{map_name}_K{results.n_clusters}{run_suffix(run)}.{global_.format}',
         bbox_inches='tight',
         dpi=global_.resolution,
         format=global_.format,
@@ -1327,6 +1329,7 @@ def plot_maps(
     data: Data,
     config: Config,
     model: str | None = None,
+    run: str | None = None,
     verbose: bool = True
 ):
     """Wrapper function for plot_map. Iterates over map types and optionally over clusters.
@@ -1336,6 +1339,7 @@ def plot_maps(
         data: Objects, features and confounders for the experiment.
         config: Combined plot and style configuration.
         model: sBayes model name, e.g., K1 (optional).
+        run: Run id appended to the file names, e.g. '0' (optional).
         verbose: If True, print progress messages. Defaults to True.
     """
     map_config = config.experiment.plots.map
@@ -1346,7 +1350,7 @@ def plot_maps(
             for cluster_idx in range(results.n_clusters):
                 if verbose:
                     print(f"Plotting {map_type} map for cluster {cluster_idx + 1}...")
-                plot_map(results, data, config, model, map_type, cluster_idx)
+                plot_map(results, data, config, model, map_type, cluster_idx, run=run)
         else:
             print(f"Plotting {map_type} map...")
-            plot_map(results, data, config, model, map_type)
+            plot_map(results, data, config, model, map_type, run=run)

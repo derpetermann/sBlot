@@ -23,7 +23,7 @@ class ModelResults(NamedTuple):
     name: str | None
     results: Results
     run: str | None = None
-    """Run label (e.g. 'run_0') if runs are kept separate, None if combined."""
+    """Run id (e.g. '0') if runs are kept separate, None if combined."""
 
 class RelativePathType(PathType):
     """Path validator that resolves paths relative to a base directory.
@@ -157,7 +157,7 @@ class ResultsConfig(BaseConfig):
 
     combine_runs: bool = True
     """Concatenate all runs of a model into one result. If False, each run is
-    plotted separately and saved to its own subfolder (e.g. path_out/run_0)."""
+    plotted separately, with the run id appended to each file name (e.g. pie_plot_K3_0.pdf)."""
 
     @model_validator(mode="after")
     def set_default_path_out(self):
@@ -809,7 +809,7 @@ def read_results(config: Config) -> Iterator[ModelResults]:
                 yield ModelResults(
                     name=experiment_name,
                     results=run,
-                    run=f"run_{path.stem.removeprefix('samples_')}",
+                    run=path.stem.removeprefix('samples_'),
                 )
 
 
