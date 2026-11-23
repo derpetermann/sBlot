@@ -865,7 +865,7 @@ class ReferenceAligner:
 
     def __init__(self, config: Config, data: Data):
         # Imported here, so sBlot works with older sBayes versions without this option
-        from sbayes.cluster_reference import find_reference_files
+        from sbayes.cluster_table import find_reference_files
 
         results_config = config.experiment.results
         self.path: Path = results_config.cluster_reference
@@ -877,7 +877,7 @@ class ReferenceAligner:
         self.object_names = list(objects.names)
 
     def __call__(self, results: Results, label: str) -> Results:
-        from sbayes.cluster_reference import ClusterReference, align_to_reference, reference_file_name
+        from sbayes.cluster_table import ClusterReference, align_to_reference, reference_file_name
 
         k = results.n_clusters
         if k not in self.references:
