@@ -1302,10 +1302,11 @@ def plot_map(
         add_index_table(objects, cluster_labels, cluster_colors,
                         config, ax)
 
+    map_name = f'{map_type}_map'
     if single_cluster_id is not None:
-        map_name = f'{map_type}_map_Z{single_cluster_id+1}'
+        cluster_suffix = f'_Z{single_cluster_id+1}'
     else:
-        map_name = f'{map_type}_map'
+        cluster_suffix = ''
 
     # Save
     if model is not None:
@@ -1315,7 +1316,7 @@ def plot_map(
 
     path_out.mkdir(parents=True, exist_ok=True)
     fig.savefig(
-        path_out / f'{map_name}_K{results.n_clusters}{run_suffix(run)}.{global_.format}',
+        path_out / f'{map_name}_K{results.n_clusters}{run_suffix(run)}{cluster_suffix}.{global_.format}',
         bbox_inches='tight',
         dpi=global_.resolution,
         format=global_.format,
