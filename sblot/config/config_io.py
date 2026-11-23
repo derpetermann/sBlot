@@ -142,12 +142,14 @@ class DataConfig(BaseConfig):
 class ResultsConfig(BaseConfig):
     """Base class for results config classes."""
 
-    path_in: RelativeDirectoryPath
-    """Path to the sBayes results files (clusters and stats)."""
+    path_in: RelativeDirectoryPath | list[RelativeDirectoryPath]
+    """Path to the sBayes results. Either a single experiment (a model folder with
+    samples files, or a folder with one subfolder per model), a parent folder with
+    one subfolder per experiment, or a list of such paths."""
 
     path_out: RelativeDirectoryPath | None = None
     """Path to the directory where plots will be saved.
-    Defaults to path_in + '_plots' if not provided."""
+    Defaults to path_in + '_plots' (common parent of all paths for a list)."""
 
     burn_in: float = 0.2
     """Fraction of samples to discard as burn-in (0.0 to 1.0)."""
@@ -159,10 +161,39 @@ class ResultsConfig(BaseConfig):
     """Concatenate all runs of a model into one result. If False, each run is
     plotted separately, with the run id appended to each file name (e.g. pie_plot_K3_0.pdf)."""
 
+    cluster_reference: Path | None = None
+    """Cluster reference table (cluster_reference_K{K}.tsv) or a folder of such tables,
+    e.g. written by sbayesAlignClusters --write-reference. The clusters of every model
+    are aligned to the table with the same K, so colours and cluster order are the same
+    across experiments and plotting sessions. None = no alignment across experiments."""
+
+    write_cluster_reference: bool = False
+    """If True, write a reference table for each K that has none yet to the
+    cluster_reference folder, taken from the first experiment with that K. Existing
+    tables are never overwritten."""
+
+    @model_validator(mode="after")
+    def validate_cluster_reference(self):
+        if self.cluster_reference is None:
+            if self.write_cluster_reference:
+                raise ValueError("write_cluster_reference requires cluster_reference to be set.")
+            return self
+        self.cluster_reference = RelativePathType.fix_path(self.cluster_reference)
+        if self.write_cluster_reference:
+            if self.cluster_reference.is_file() or self.cluster_reference.suffix == ".tsv":
+                raise ValueError(
+                    "With write_cluster_reference, cluster_reference must be a folder, "
+                    f"got {self.cluster_reference}."
+                )
+        elif not self.cluster_reference.exists():
+            raise ValueError(f"Cluster reference not found: {self.cluster_reference}.")
+        return self
+
     @model_validator(mode="after")
     def set_default_path_out(self):
         if self.path_out is None:
-            self.path_out = RelativePathType.fix_path(f"{self.path_in}_plots")
+            paths = self.path_in if isinstance(self.path_in, list) else [self.path_in]
+            self.path_out = RelativePathType.fix_path(f"{os.path.commonpath(paths)}_plots")
         else:
             self.path_out = RelativePathType.fix_path(self.path_out)
         return self
@@ -748,52 +779,140 @@ def read_data(config: Config) -> Data:
     )
 
 
-def read_results(config: Config) -> Iterator[ModelResults]:
-    """Iterate over all models in the results directory.
+def _has_samples(path: Path) -> bool:
+    return any(path.glob("samples_*.h5"))
 
-    Handles two folder structures:
-    - Flat: path_in contains samples files directly (single model)
-    - Nested: path_in contains subfolders, each with samples files
+
+def _model_dirs(path: Path) -> list[Path]:
+    """Subfolders of path that contain samples files, sorted by K (then name)."""
+    def sort_key(d: Path):
+        m = re.search(r'K(\d+)', d.name)
+        return (int(m.group(1)) if m else float('inf'), d.name)
+    return sorted((d for d in path.iterdir() if d.is_dir() and _has_samples(d)), key=sort_key)
+
+
+def find_experiments(path_in: Path | list[Path]) -> list[tuple[str, list[Path]]]:
+    """Find all experiments and their model folders in path_in.
+
+    Each path is one of:
+    - a model folder containing samples files (experiment named after its parent)
+    - an experiment folder with one subfolder per model
+    - a parent folder with one subfolder per experiment
+
+    Returns:
+        List of (experiment name, model folders) tuples.
+    """
+    paths = path_in if isinstance(path_in, list) else [path_in]
+    experiments = []
+    for path in map(Path, paths):
+        if _has_samples(path):
+            experiments.append((path.parent.name, [path]))
+        elif model_dirs := _model_dirs(path):
+            experiments.append((path.name, model_dirs))
+        else:
+            sub_experiments = [
+                (d.name, model_dirs)
+                for d in sorted(path.iterdir()) if d.is_dir()
+                if (model_dirs := _model_dirs(d))
+            ]
+            if not sub_experiments:
+                raise FileNotFoundError(f"No results found in {path}.")
+            experiments.extend(sub_experiments)
+
+    names = [name for name, _ in experiments]
+    duplicates = sorted({n for n in names if names.count(n) > 1})
+    if duplicates:
+        raise ValueError(f"Experiment names must be unique, found duplicates: {duplicates}.")
+    return experiments
+
+
+def read_results(config: Config, data: Data | None = None) -> Iterator[ModelResults]:
+    """Iterate over all models of all experiments in results.path_in.
+
+    Runs within a model folder are concatenated unless results.combine_runs
+    is False, in which case one ModelResults is yielded per run. If
+    results.cluster_reference is set, the clusters are aligned to it.
 
     Args:
         config: Combined plot and style configuration.
-    Runs within a model folder are concatenated unless results.combine_runs
-    is False, in which case one ModelResults is yielded per run.
-
+        data: The data, used to match the objects to the cluster reference.
+            Read from the config if needed and not provided.
     Yields:
-        ModelResults(name, results, run) for each model (or run) found.
+        ModelResults(name, results, run) for each model (or run) found,
+        where name is the experiment name.
     """
-    path_in = Path(config.experiment.results.path_in)
+    align = None
+    if config.experiment.results.cluster_reference is not None:
+        align = ReferenceAligner(config, data if data is not None else read_data(config))
 
-    # Check if results files are directly in path_in or in subfolders
-    direct_files = sorted(path_in.glob("samples_*.h5"))
-    if direct_files:
-        # Flat structure — single model in path_in
-        model_dirs = [path_in]
-        experiment_name = path_in.parent.name
-    else:
-        # Nested structure — one subfolder per model
-        matched_dirs = [
-            (d, re.search(r'K(\d+)', d.name))
-            for d in path_in.iterdir() if d.is_dir()
-        ]
-        model_dirs = sorted(
-            [d for d, m in matched_dirs if m is not None],
-            key=lambda d: int(re.search(r'K(\d+)', d.name).group(1))
-        )
-        experiment_name = path_in.name
+    for experiment_name, model_dirs in find_experiments(config.experiment.results.path_in):
+        for model in _read_experiment(config, experiment_name, model_dirs):
+            if align is not None:
+                label = experiment_name + (f" run {model.run}" if model.run else "")
+                model = model._replace(results=align(model.results, label))
+            yield model
 
-    if not model_dirs:
-        raise FileNotFoundError(f"No results found in {path_in}.")
 
+class ReferenceAligner:
+    """Aligns results to the cluster reference tables in results.cluster_reference.
+
+    Tables are read when first needed. With results.write_cluster_reference, a missing
+    table is written from the first results with that number of clusters.
+    """
+
+    WARN_BELOW = 0.5
+    """Warn about clusters whose overlap with the reference is below this."""
+
+    def __init__(self, config: Config, data: Data):
+        # Imported here, so sBlot works with older sBayes versions without this option
+        from sbayes.cluster_reference import find_reference_files
+
+        results_config = config.experiment.results
+        self.path: Path = results_config.cluster_reference
+        self.write = results_config.write_cluster_reference
+        self.files = find_reference_files(self.path) if self.path.exists() else {}
+        self.references = {}
+        objects = data[0]
+        self.object_ids = list(objects.id)
+        self.object_names = list(objects.names)
+
+    def __call__(self, results: Results, label: str) -> Results:
+        from sbayes.cluster_reference import ClusterReference, align_to_reference, reference_file_name
+
+        k = results.n_clusters
+        if k not in self.references:
+            if k in self.files:
+                self.references[k] = ClusterReference.read(self.files[k])
+            elif self.write:
+                path = self.path / reference_file_name(k)
+                ClusterReference.from_results(results, self.object_ids, self.object_names).write(path)
+                print(f"Wrote cluster reference for K={k} from {label}: {path}")
+                self.references[k] = ClusterReference.read(path)
+            else:
+                warnings.warn(f"No cluster reference for K={k} in {self.path}, clusters are not aligned.")
+                self.references[k] = None
+
+        reference = self.references[k]
+        if reference is None:
+            return results
+
+        aligned, overlap = align_to_reference(results, reference, self.object_ids)
+        poor = [f"{name} ({o:.2f})" for name, o in zip(aligned.cluster_names, overlap) if o < self.WARN_BELOW]
+        if poor:
+            warnings.warn(
+                f"{label}, K={k}: clusters {', '.join(poor)} overlap little with the "
+                f"cluster reference, so they may not correspond to the reference clusters."
+            )
+        return aligned
+
+
+def _read_experiment(config: Config, experiment_name: str, model_dirs: list[Path]) -> Iterator[ModelResults]:
+    """Read the results of all models of one experiment."""
     burn_in = config.experiment.results.burn_in
     thinning = config.experiment.results.thinning
 
     for model_dir in model_dirs:
         samples_paths = sorted(model_dir.glob("samples_*.h5"))
-        if not samples_paths:
-            continue
-
         runs = [
             Results.from_h5(p, burn_in=burn_in, subsample_interval=thinning)
             for p in samples_paths

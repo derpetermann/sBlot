@@ -27,11 +27,14 @@ data:
 # Defines where to find the sBayes results and where to save plots
 # ------------------------------------------------------------
 results:
-  # Path to the results directory containing clusters_*.txt, stats_*.txt and likelihood_*.h5 files
-  # Can be a flat directory (single model) or contain subdirectories (multiple models)
+  # Path to the sBayes results directory containing samples_*.h5 files
+  # Can be a flat directory (single model) or contain subdirectories (multiple models).
+  # To compare several experiments (e.g. different model settings), use a parent folder
+  # with one subfolder per experiment, or a list of paths:
+  #   path_in: [results/experiment_a, results/experiment_b]
   path_in: results
   # Path to the directory where plots will be saved
-  # null = defaults to path_in + '_plots'
+  # null = defaults to path_in + '_plots' (for a list: common parent of all paths + '_plots')
   path_out: null
   # Fraction of samples to discard as burn-in (0.0 to 1.0)
   burn_in: 0.2
@@ -39,6 +42,14 @@ results:
   thinning: 1
   # Concatenate all runs of a model (true) or plot each run separately (false)
   combine_runs: true
+  # Align the clusters to a cluster reference table (cluster_reference_K{K}.tsv) or a folder
+  # of such tables, so colours and cluster order are the same across experiments and runs.
+  # The tables can be edited by hand (column order = cluster order, column names = cluster names).
+  # null = no alignment across experiments
+  cluster_reference: null
+  # Write a reference table for each K that has none yet, from the first experiment with that K
+  # (requires cluster_reference to be a folder; existing tables are never overwritten)
+  write_cluster_reference: false
 
 # ------------------------------------------------------------
 # Plot settings

@@ -15,12 +15,68 @@ Specify the input and output paths for an `sBayes` run, along with parameters co
 
 | Key        | Type   | Default           | Description                                                              |
 |------------|--------|-------------------|--------------------------------------------------------------------------|
-| `path_in`  | string | *required*        | Path to the results files (clusters and stats) from an `sBayes` analysis |
-| `path_out` | string | `{path_in}_plots` | Directory where generated plots will be saved                            |
+| `path_in`  | string or list | *required* | Path to the results of an `sBayes` analysis, a parent folder with one subfolder per experiment, or a list of such paths (see below) |
+| `path_out` | string | `{path_in}_plots` | Directory where generated plots will be saved (for a list: common parent of all paths + `_plots`) |
 | `burn_in`  | float  | `0.2`             | Fraction of samples to discard as burn-in (0.0–1.0)                      |
 | `thinning` | int    | `1`               | Keep every *n*th sample to reduce memory usage                           |
 | `combine_runs` | bool | `true`          | Concatenate all runs of a model; if `false`, each run is plotted separately with the run id appended to the file names (e.g. `pie_plot_K3_0.pdf`) |
+| `cluster_reference` | string | `null` | Cluster reference table (`cluster_reference_K{K}.tsv`) or a folder of such tables to align the clusters to (see below) |
+| `write_cluster_reference` | bool | `false` | Write missing reference tables to the `cluster_reference` folder, from the first experiment with that K |
 
+
+### Multiple experiments
+An *experiment* is the results folder of one `sBayes` setup (e.g. one set of model settings). `path_in` can point to:
+- a model folder containing `samples_*.h5` files (the experiment is named after its parent folder),
+- an experiment folder with one subfolder per model (e.g. `K1`, `K2`, ...),
+- a parent folder with one subfolder per experiment,
+- a list of any of the above.
+
+```yaml
+results:
+  path_in:
+    - results/experiment_a
+    - results/experiment_b
+```
+
+When there are several experiments, the plots of each experiment are saved to their own subfolder
+(`{path_out}/{experiment}/...`), and the `loo` plot compares all experiments.
+
+### Aligning clusters across experiments
+Cluster labels are arbitrary, so different experiments (or separately plotted runs) can find the
+same clusters under different labels and therefore different colours. With `cluster_reference`,
+the clusters of every model are aligned to a reference table with the same K, so that colours and
+cluster order stay the same across experiments and across plotting sessions (e.g. when an
+experiment is added later, only the new experiment needs to be plotted).
+
+The reference is a TSV table per K, `cluster_reference_K{K}.tsv`, with the mean membership of each
+object (rows) in each cluster (columns):
+
+```
+object  id      name      a0     a1
+0       abcd1   Lang A    0.912  0.003
+1       efgh2   Lang B    0.004  0.871
+...
+```
+
+- the **column order** sets the cluster order (`Z1`, `Z2`, ... and their colours),
+- the **column names** set the cluster names (e.g. in the preferences plots),
+- objects are matched by `id` if present, otherwise by the `object` index.
+
+The table can be edited by hand, e.g. to reorder the clusters for more contrast between
+neighbouring clusters on a map, or to roughly match the clusters across different K.
+
+There are two ways to create the tables:
+- set `write_cluster_reference: true`: sBlot writes a table for each K that has none yet, from the
+  first experiment in `path_in` with that K. Existing tables are never overwritten.
+- run `sbayesAlignClusters <results> --write-reference [DIR] --features <features.csv>` in sBayes,
+  which uses the same reference run as for the aligned stats files.
+
+```yaml
+results:
+  path_in: results
+  cluster_reference: results/cluster_reference
+  write_cluster_reference: true
+```
 
 ## Data (`data`)
 Specify the input data used in the analysis, including feature definitions and spatial reference information.

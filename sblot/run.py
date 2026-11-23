@@ -36,17 +36,20 @@ def main(
 
     def enabled(name: str) -> bool:
         return (plot_types is None or name in plot_types) and bool(getattr(config.experiment.plots, name))
-    all_models = list(read_results(config))
+    all_models = list(read_results(config, data))
+    # With several experiments, each one gets its own output subfolder
+    multiple_experiments = len({model.name for model in all_models}) > 1
 
     for model in all_models:
+        experiment = model.name if multiple_experiments else None
         if enabled("weights"):
-            plot_weights(model.results, config, run=model.run)
+            plot_weights(model.results, config, model=experiment, run=model.run)
         if enabled("preferences"):
-            plot_preferences(model.results, config, run=model.run)
+            plot_preferences(model.results, config, model=experiment, run=model.run)
         if enabled("pies"):
-            plot_pies(model.results, data, config, run=model.run)
+            plot_pies(model.results, data, config, model=experiment, run=model.run)
         if enabled("map"):
-            plot_maps(model.results, data, config, run=model.run)
+            plot_maps(model.results, data, config, model=experiment, run=model.run)
 
     if enabled("loo"):
         plot_loo(all_models, config)
