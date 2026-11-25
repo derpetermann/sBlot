@@ -688,6 +688,9 @@ class MapConfig(BaseConfig):
     """Map type. Either 'pie', 'line' or 'idw'"""
     plot_confounder: str | None = None
     """Add a confounder to the map."""
+    confounder_overlap_only: bool = True
+    """If True, only plot confounder groups (e.g. families) that overlap with clusters.
+    If False, plot all confounder groups regardless of cluster overlap."""
     labels: str = "all"
     """Add labels to the map. Either "all", "in_cluster" or none"""
     min_posterior_probability: float | None =  None

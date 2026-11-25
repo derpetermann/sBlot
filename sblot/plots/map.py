@@ -1287,8 +1287,22 @@ def plot_map(
 
     if confounder_name and confounder_name in confounders and experiment.plots.map.type != "idw":
         confounder = confounders[confounder_name]
+        group_assignment = confounder.group_assignment.copy()
+        group_names = np.array(confounder.group_names)
+        if experiment.plots.map.confounder_overlap_only:
+            # Only plot confounder groups that overlap with the shown clusters
+            in_cluster = get_dominant_cluster(results.clusters, config)
+            if single_cluster_id is not None:
+                has_cluster = in_cluster[single_cluster_id]
+            else:
+                has_cluster = np.any(in_cluster, axis=0)
+            group_assignment[:, ~has_cluster] = False
+
+            group_on_map = np.any(group_assignment, axis=1)
+            group_assignment = group_assignment[group_on_map]
+            group_names = group_names[group_on_map]
         add_confounder_shapes(
-            confounder_name, confounder.group_assignment, confounder.group_names,
+            confounder_name, group_assignment, group_names,
             locations_map_crs, config, ax,
         )
 

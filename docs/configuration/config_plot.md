@@ -157,6 +157,7 @@ The posterior maps show cluster assignments in geographic space.
 |-----------------------------|---------|-----------|-------------------------------------------------------------------------------------------------------------|
 | `type`                      | string  | `line`    | Map type: `line` = objects in clusters connected with a graph, `pie` = pie charts, `idw` = interpolated map |
 | `plot_confounder`           | string  | `null`    | Confounder to overlay on the map as alpha shapes e.g. `family`. `null` = no overlay                         |
+| `confounder_overlap_only`   | bool    | `true`    | Only overlay confounder groups that contain objects shown in a cluster. `false` = overlay all groups        |
 | `labels`                    | string  | `all`     | Which objects to label: `all`, `in_cluster` or `none`                                                       |
 | `min_posterior_probability` | float   | `null`    | Minimum posterior probability for an object to appear in the cluster. `null` = show all objects             |
 | `per_cluster`               | boolean | `false`   | Generate one map per cluster instead of all clusters combined                                               |

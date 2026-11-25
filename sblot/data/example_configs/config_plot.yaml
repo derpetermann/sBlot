@@ -96,6 +96,8 @@ plots:
     type: line
     # Confounder to overlay as alpha shapes on the map e.g. "family". null = no overlay
     plot_confounder: family
+    # Only overlay confounder groups that overlap with the shown clusters
+    confounder_overlap_only: true
     # Which objects to label: "all", "in_cluster" or "none"
     labels: all
     # Minimum posterior probability for an object to appear in the cluster
