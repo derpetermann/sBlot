@@ -141,6 +141,10 @@ Pie chart plots show the posterior cluster membership per object.
 | Key       | Type    | Default | Description                                                        |
 |-----------|---------|---------|--------------------------------------------------------------------|
 | `enabled` | boolean | `false` | Whether to generate pie charts. Set to `true` to enable this plot  |
+| `chart_type` | string | `pie` | Panel type per object: `pie` = share of samples per cluster, `kde` or `histogram` = distribution of each cluster's membership across samples |
+| `confounder` | string | `null` | Confounder whose group is shown beneath each object name, e.g. `family`. `null` = none |
+| `group_by_cluster` | boolean | `false` | Arrange the panels in one row per cluster, holding the objects whose median membership in that cluster is at least `group_by_cluster_threshold`, sorted by that median. Objects can appear in several rows |
+| `group_by_cluster_threshold` | float | `0.5` | Minimum median cluster membership for an object to appear in a cluster's row |
 
 ### Loo plots (`plots.loo`)
 PSIS-LOO plots compare the posterior support for different models.

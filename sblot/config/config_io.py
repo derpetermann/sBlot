@@ -322,6 +322,35 @@ class PiesLabelConfig(BaseConfig):
     index_size: int = 15
     name_size: int = 15
     max_label_length: int = 10
+    confounder_size: int = 10
+    """Font size of the confounder group shown beneath the object name."""
+    confounder_color: str = "#666666"
+    """Color of the confounder group label."""
+
+
+class PiesHighlightConfig(BaseConfig):
+    """Highlighting of each panel's main cluster."""
+    enabled: bool = True
+    """Keep the cluster color only for the main cluster of each panel and draw the
+    other clusters in a transparent grey."""
+    other_color: str = "#808080"
+    """Color of the non-main clusters."""
+    other_alpha: float = 0.35
+    """Opacity of the non-main pie slices, histogram bars and KDE lines."""
+    other_fill_alpha: float = 0.22
+    """Opacity of the fill under non-main KDE curves."""
+
+
+class PiesDistributionConfig(BaseConfig):
+    """Style settings for the kde and histogram chart types."""
+    n_bins: PositiveInt = 20
+    """Number of histogram bins on [0, 1]."""
+    y_max: float | None = None
+    """Upper y-axis limit. None = automatic."""
+    name_size: int = 9
+    """Font size of the object index and name."""
+    confounder_size: int = 8
+    """Font size of the confounder group label."""
 
 
 class PiesOutputConfig(BaseConfig):
@@ -338,10 +367,23 @@ class PiesConfig(BaseConfig):
     # Analytical
     enabled: bool = True
     """Pie charts are generated when this section is present."""
+    chart_type: Literal["pie", "kde", "histogram"] = "pie"
+    """Panel type per object: "pie" (share of samples per cluster), or "kde" /
+    "histogram" (distribution of each cluster's membership across samples)."""
+    confounder: str | None = None
+    """Confounder (e.g. "family") whose group is shown beneath each object name."""
+    group_by_cluster: bool = False
+    """Arrange the panels in one row per cluster, holding the objects whose median
+    membership in that cluster is at least group_by_cluster_threshold, sorted by
+    that median. Objects can appear in several rows."""
+    group_by_cluster_threshold: float = Field(default=0.5, ge=0.0, le=1.0)
+    """Minimum median cluster membership for an object to appear in a cluster's row."""
 
     # Style
     label: PiesLabelConfig = Field(default_factory=PiesLabelConfig)
     pie: PiesPieConfig = Field(default_factory=PiesPieConfig)
+    highlight: PiesHighlightConfig = Field(default_factory=PiesHighlightConfig)
+    distribution: PiesDistributionConfig = Field(default_factory=PiesDistributionConfig)
     axes: PiesAxesConfig = Field(default_factory=PiesAxesConfig)
     output: PiesOutputConfig = Field(default_factory=PiesOutputConfig)
 

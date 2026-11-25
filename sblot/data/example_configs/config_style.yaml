@@ -144,6 +144,34 @@ pies:
     # Maximum label length in characters before the name is broken
     # into two lines at the nearest space or hyphen
     max_label_length: 10
+    # Font size and color of the confounder group shown beneath the name
+    # (see plots.pies.confounder in config_plot.yaml)
+    confounder_size: 10
+    confounder_color: "#666666"
+
+  # Highlighting of each panel's main cluster (the cluster with the highest
+  # mean membership, or the row's cluster when grouping by cluster)
+  highlight:
+    # Keep the cluster color only for the main cluster and draw all other
+    # clusters in a transparent grey
+    enabled: true
+    # Color of the non-main clusters
+    other_color: "#808080"
+    # Opacity of non-main pie slices, histogram bars and KDE lines
+    other_alpha: 0.35
+    # Opacity of the fill under non-main KDE curves
+    other_fill_alpha: 0.22
+
+  # Style settings for the "kde" and "histogram" chart types
+  distribution:
+    # Number of histogram bins on [0, 1]
+    n_bins: 20
+    # Upper y-axis limit. null = automatic
+    y_max: null
+    # Font size of the object index and name
+    name_size: 9
+    # Font size of the confounder group label
+    confounder_size: 8
 
   # Style settings for individual pie charts
   pie:

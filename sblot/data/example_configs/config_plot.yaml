@@ -84,6 +84,15 @@ plots:
   # Pie chart plots — posterior cluster membership per object
   pies:
     enabled: true
+    # Panel type per object: "pie" (share of samples per cluster), or "kde" /
+    # "histogram" (distribution of each cluster's membership across samples)
+    chart_type: pie
+    # Confounder whose group is shown beneath each object name, e.g. "family". null = none
+    confounder: null
+    # Arrange the panels in one row per cluster, holding the objects whose median
+    # membership in that cluster is at least group_by_cluster_threshold
+    group_by_cluster: false
+    group_by_cluster_threshold: 0.5
 
   # PSIS-LOO model comparison plots — compares models with different numbers of clusters
   # Requires likelihood files (likelihood_*.h5) in the results directory

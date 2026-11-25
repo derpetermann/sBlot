@@ -83,6 +83,7 @@ def kdeplot_with_mean(
     alpha: float = 0.2,
     clip: tuple[float, float] | None = None,
     zorder: int | None = None,
+    line_alpha: float | None = None,
 ) -> None:
     """Plot a KDE curve with a vertical mean line and shaded fill.
 
@@ -97,16 +98,24 @@ def kdeplot_with_mean(
         alpha: Opacity of the fill under the curve.
         clip: Optional (min, max) tuple to clip the KDE estimate.
         zorder: Drawing order for all plot elements.
+        line_alpha: Opacity of the KDE curve and mean line. None = opaque.
     """
+    n_lines = len(ax.lines)
     sns.kdeplot(x, fill=False, color=color, ax=ax, lw=lw, clip=clip, zorder=zorder)
+
+    # Seaborn skips the curve for samples without variance
+    if len(ax.lines) == n_lines:
+        return
 
     # Add vertical line at the mean, clipped to the KDE curve height
     kde_line = ax.lines[-1]
+    if line_alpha is not None:
+        kde_line.set_alpha(line_alpha)
     xs = kde_line.get_xdata()
     ys = kde_line.get_ydata()
     mean = np.mean(x)
     height = np.interp(mean, xs, ys)
-    ax.vlines(mean, 0, height, color=color, lw=lw, ls=':', zorder=zorder)
+    ax.vlines(mean, 0, height, color=color, lw=lw, ls=':', zorder=zorder, alpha=line_alpha)
 
     # Shade the area under the curve
     ax.fill_between(xs, 0, ys, facecolor=color, alpha=alpha, zorder=zorder)

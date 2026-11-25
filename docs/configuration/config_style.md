@@ -134,6 +134,8 @@ Style settings for pie chart plots showing cluster membership per object.
 |----------|------|---------|--------------------------------------------------|
 | `label`  | dict | —       | Style settings for object labels                 |
 | `pie`    | dict | —       | Style settings for individual pie charts         |
+| `highlight` | dict | —    | Highlighting of each panel's main cluster        |
+| `distribution` | dict | — | Style settings for the `kde` and `histogram` chart types |
 | `axes`   | dict | —       | Axes limits and label positions                  |
 | `output` | dict | —       | Output settings for the grid layout              |
 
@@ -145,6 +147,8 @@ Controls the appearance of object labels next to each pie chart.
 | `index_size`       | int  | `15`    | Font size of the object index number                                  |
 | `name_size`        | int  | `15`    | Font size of the object name                                          |
 | `max_label_length` | int  | `10`    | Character threshold above which long labels are broken into two lines |
+| `confounder_size`  | int  | `10`    | Font size of the confounder group shown beneath the name              |
+| `confounder_color` | string | `#666666` | Color of the confounder group label                             |
 
 ### `pies.pie`
 Controls the appearance of individual pie charts.
@@ -153,6 +157,26 @@ Controls the appearance of individual pie charts.
 |--------------------|--------|-------------|-----------------------------------------------|
 | `radius`           | float  | `15`        | Pie chart radius in axis units                |
 | `no_cluster_color` | string | `lightgrey` | Color for objects not assigned to any cluster |
+
+### `pies.highlight`
+Each panel's main cluster (the cluster with the highest mean membership, or the row's cluster when grouping by cluster) keeps its cluster color; the other clusters are drawn in a transparent grey.
+
+| Key                | Type   | Default   | Description                                                   |
+|--------------------|--------|-----------|---------------------------------------------------------------|
+| `enabled`          | bool   | `true`    | Whether to grey out the non-main clusters                     |
+| `other_color`      | string | `#808080` | Color of the non-main clusters                                |
+| `other_alpha`      | float  | `0.35`    | Opacity of non-main pie slices, histogram bars and KDE lines  |
+| `other_fill_alpha` | float  | `0.22`    | Opacity of the fill under non-main KDE curves                 |
+
+### `pies.distribution`
+Style settings for the `kde` and `histogram` chart types.
+
+| Key               | Type  | Default | Description                                  |
+|-------------------|-------|---------|----------------------------------------------|
+| `n_bins`          | int   | `20`    | Number of histogram bins on [0, 1]           |
+| `y_max`           | float | `null`  | Upper y-axis limit. `null` = automatic       |
+| `name_size`       | int   | `9`     | Font size of the object index and name       |
+| `confounder_size` | int   | `8`     | Font size of the confounder group label      |
 
 ### `pies.axes`
 Controls the axes limits and label positions within each pie panel.
