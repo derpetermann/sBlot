@@ -93,12 +93,15 @@ def plot_preferences_simplex(
         y = samples_projected.T[1]
 
         # KDE density plot
-        sns.kdeplot(
-            x=x, y=y,
-            fill=True, thresh=0, cut=30, levels=20,
-            clip=((xmin, xmax), (ymin, ymax)),
-            cmap=PREF_COLOR_MAP, ax=ax, zorder=1,
-        )
+        try:
+            sns.kdeplot(
+                x=x, y=y,
+                fill=True, thresh=0, cut=30, levels=20,
+                clip=((xmin, xmax), (ymin, ymax)),
+                cmap=PREF_COLOR_MAP, ax=ax, zorder=1,
+            )
+        except ValueError as e:
+            print(e)
 
         # Plot mean marker
         mean_projected = np.mean(samples, axis=0).dot(corners)
