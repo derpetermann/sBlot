@@ -1,9 +1,26 @@
 import arviz as az
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import seaborn as sns
 
 from sblot.config.config_io import Config, ModelResults
+
+
+def relative_eff(log_lik: np.ndarray) -> float:
+    """Relative efficiency (ESS / n_draws) of the pointwise likelihood draws for PSIS-LOO.
+
+    Follows R's loo::relative_eff: the ESS of exp(log_lik) is computed per observation
+    from the (autocorrelated) MCMC draws and averaged, since arviz only accepts a scalar.
+
+    Args:
+        log_lik: pointwise log-likelihoods of shape (n_draws, n_objects).
+    """
+    # Subtract the per-observation max to avoid underflow; ESS is invariant to scaling.
+    lik = np.exp(log_lik - log_lik.max(axis=0, keepdims=True))
+    ess = az.ess(az.convert_to_dataset({"lik": lik[np.newaxis, :, :]}), method="mean")["lik"].values
+    return float(np.nanmean(ess) / log_lik.shape[0])
+
 
 def plot_loo(all_models: list[ModelResults],
              config: Config,
@@ -25,14 +42,20 @@ def plot_loo(all_models: list[ModelResults],
 
     records = []
     for model in all_models:
-        for run_id, likelihood in model.likelihoods:
-            loo = az.loo(likelihood, var_name="y")
-            records.append({
-                "experiment": model.name,
-                "k": model.k,
-                "run": run_id,
-                "elpd_loo": loo.elpd
-                })
+        likelihood_pointwise = model.results.likelihood_pointwise
+        if likelihood_pointwise is None:
+            raise ValueError(
+                f"Results for model '{model.name}' do not contain pointwise log-likelihoods "
+                "(required for PSIS-LOO). Re-run sBayes with likelihood logging enabled."
+            )
+        idata = az.from_dict(log_likelihood={"y": likelihood_pointwise[np.newaxis, :, :]})
+        loo = az.loo(idata, var_name="y", reff=relative_eff(likelihood_pointwise))
+        records.append({
+            "experiment": model.name,
+            "k": model.results.n_clusters,
+            "run": model.run,
+            "elpd_loo": loo.elpd,
+            })
 
 
     df = pd.DataFrame(records)
