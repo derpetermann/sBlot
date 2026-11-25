@@ -476,6 +476,7 @@ def add_cluster_legend(
         ncol=1,
         facecolor='#ffffff',
         columnspacing=1,
+        labelspacing=0.7,
         loc='upper left',
         bbox_to_anchor=(legend.clusters.position.x,
                         legend.clusters.position.y),
@@ -1039,12 +1040,12 @@ def render_pie_map(
         legend_handles = [
             Line2D([0], [0], marker='o', color='w',
                    markerfacecolor=col, markeredgecolor='black',
-                   markeredgewidth=0.5, markersize=10)
+                   markeredgewidth=0.5, markersize=config.style.map.legend.clusters.font_size + 2)
             for col in cluster_colors
         ] + [
             Line2D([0], [0], marker='o', color='w',
                    markerfacecolor='lightgrey', markeredgecolor='black',
-                   markeredgewidth=0.5, markersize=10)
+                   markeredgewidth=0.5, markersize=config.style.map.legend.clusters.font_size + 2)
         ]
         if single_cluster_id is not None:
             legend_labels = [f'$Z_{{{single_cluster_id + 1}}}$'] + ['other or no cluster']
@@ -1167,12 +1168,12 @@ def render_idw_map(
         legend_handles = [
                              Line2D([0], [0], marker='s', color='w',
                                     markerfacecolor=col, markeredgecolor='black',
-                                    markeredgewidth=0.5, markersize=10)
+                                    markeredgewidth=0.5, markersize=config.style.map.legend.clusters.font_size + 2)
                              for col in cluster_colors
                          ] + [
                              Line2D([0], [0], marker='s', color='w',
                                     markerfacecolor='white', markeredgecolor='black',
-                                    markeredgewidth=0.5, markersize=10)
+                                    markeredgewidth=0.5, markersize=config.style.map.legend.clusters.font_size + 2)
                          ]
         if single_cluster_id is not None:
             legend_labels = [f'$Z_{{{single_cluster_id + 1}}}$'] + ['other or no cluster']
