@@ -6,6 +6,7 @@ import warnings
 
 from pathlib import Path
 from pandas import read_csv
+from tables import HDF5ExtError
 from pydantic import BaseModel, DirectoryPath, Field, model_validator, PositiveInt, field_validator
 from pydantic_core import PydanticCustomError
 from pydantic_core.core_schema import ValidationInfo
@@ -965,11 +966,18 @@ def _read_experiment(config: Config, experiment_name: str, model_dirs: list[Path
     thinning = config.experiment.results.thinning
 
     for model_dir in model_dirs:
-        samples_paths = sorted(model_dir.glob("samples_*.h5"))
-        runs = [
-            Results.from_h5(p, burn_in=burn_in, subsample_interval=thinning)
-            for p in samples_paths
-        ]
+        samples_paths, runs = [], []
+        for path in sorted(model_dir.glob("samples_*.h5")):
+            try:
+                runs.append(Results.from_h5(path, burn_in=burn_in, subsample_interval=thinning))
+                samples_paths.append(path)
+            except HDF5ExtError as e:
+                # E.g. a file copied while its run was writing
+                summary = str(e).strip().splitlines()[-1]
+                warnings.warn(f"Skipping unreadable samples file {path}: {summary}")
+        if not runs:
+            continue
+
         if config.experiment.results.combine_runs:
             yield ModelResults(
                 name=experiment_name,
