@@ -540,6 +540,8 @@ class MapGraphicClusterConfig(BaseConfig):
     """Opacity. 'frequency' = scale by posterior frequency, or fixed float."""
     pie_radius_factor: float = 0.008
     """Base pie radius as a fraction of the minimum map span (pie map only)."""
+    min_certainty_alpha: float = Field(default=0.15, ge=0.0, le=1.0)
+    """Opacity of the least certain objects when certainty_alpha is enabled."""
 
 
 class MapGraphicObjectsConfig(BaseConfig):
@@ -736,11 +738,17 @@ class MapConfig(BaseConfig):
     labels: str = "all"
     """Add labels to the map. Either "all", "in_cluster" or none"""
     min_posterior_probability: float | None =  None
-    """Minimum posterior probability for objects in a cluster to appear in the map. None = include all objects. 
-    Set to a value between 0 and 1 e.g. 0.9 = only show objects assigned to the cluster in at least 90% of posterior samples."""
+    """Minimum mean membership of an object in its main cluster (averaged over posterior
+    samples) for it to appear in that cluster on the map. None = include all objects.
+    E.g. 0.9 = only show objects with a mean membership of at least 0.9; for binary
+    cluster samples this means assigned to the cluster in at least 90% of samples."""
     per_cluster: bool = False
     """If True, generate a separate map for each cluster showing only that cluster's
     assignments. If False, generate a single map showing all clusters together."""
+    certainty_alpha: bool = False
+    """Fade objects on line and pie maps by how certain their cluster assignment is:
+    the share of posterior samples in which their membership in their main cluster
+    is at least min_posterior_probability (0.5 if that is None)."""
     line: MapLineConfig = Field(default_factory=MapLineConfig)
     """Configuration for line map."""
     idw: MapIdwConfig = Field(default_factory=MapIdwConfig)

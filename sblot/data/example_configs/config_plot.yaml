@@ -109,11 +109,16 @@ plots:
     confounder_overlap_only: true
     # Which objects to label: "all", "in_cluster" or "none"
     labels: all
-    # Minimum posterior probability for an object to appear in the cluster
+    # Minimum mean membership (averaged over posterior samples) of an object in its
+    # main cluster for it to appear in that cluster
     # null = show all objects (use for line maps)
     min_posterior_probability: 0.6
     # Additionally, generate one map per cluster instead of all clusters in one map
     per_cluster: false
+    # Fade objects on line and pie maps by how certain their cluster assignment is:
+    # the share of posterior samples in which their membership in their main cluster
+    # is at least min_posterior_probability (0.5 if that is null)
+    certainty_alpha: false
 
     # Line map settings — only relevant when type is "line"
     line:

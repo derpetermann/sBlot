@@ -374,6 +374,36 @@ def get_dominant_cluster(
 
 
 
+def get_certainty_alpha(clusters: NDArray[float], config: Config) -> NDArray[float] | None:
+    """Opacity per object reflecting how certainly it belongs to its main cluster.
+
+    The certainty is the share of posterior samples in which the object's membership
+    in its main cluster (highest mean membership) is at least min_posterior_probability,
+    or 0.5 if that is not set. It is mapped linearly onto [min_certainty_alpha, 1].
+
+    Args:
+        clusters: Cluster samples, shape (n_samples, n_clusters, n_objects).
+        config: Combined plot and style configuration.
+    Returns:
+        Opacity per object, shape (n_objects,), or None if certainty_alpha is disabled.
+    """
+    map_config = config.experiment.plots.map
+    if not map_config.certainty_alpha:
+        return None
+    threshold = map_config.min_posterior_probability
+    if threshold is None:
+        threshold = 0.5
+
+    clusters = np.asarray(clusters, dtype=float)
+    n_objects = clusters.shape[2]
+    main_cluster = np.argmax(get_cluster_probability(clusters), axis=0)
+    main_samples = clusters[:, main_cluster, np.arange(n_objects)]  # (n_samples, n_objects)
+    certainty = np.mean(main_samples >= threshold, axis=0)
+
+    min_alpha = config.style.map.graphics.clusters.min_certainty_alpha
+    return min_alpha + (1.0 - min_alpha) * certainty
+
+
 def add_overview_map(
     locations_map_crs: NDArray[float],
     extent: Extent,
@@ -940,8 +970,13 @@ def render_line_map(
 
     cluster_objects = locations_map_crs[in_any_cluster]
 
+    point_colors = colors.to_rgba_array(max_cluster_color)
+    alpha = get_certainty_alpha(clusters, config)
+    if alpha is not None:
+        point_colors[:, 3] = alpha[in_any_cluster]
+
     ax.scatter(*cluster_objects.T,
-               s=point_size, color=max_cluster_color)
+               s=point_size, color=point_colors)
 
     # Draw cluster connection lines and collect labels
     cluster_labels, legend_handles = render_cluster_connection(
@@ -1005,6 +1040,7 @@ def render_pie_map(
     in_cluster = get_dominant_cluster(clusters, config)
     cluster_prob_matrix = get_cluster_probability(clusters)
     objects_in_cluster_indices = np.where(np.any(in_cluster, axis=0))[0]
+    alpha = get_certainty_alpha(clusters, config)
 
     # Compute fixed pie radius in data units
     x_span = np.ptp(locations_map_crs[:, 0])
@@ -1031,6 +1067,7 @@ def render_pie_map(
                 facecolor=col,
                 edgecolor='black',
                 linewidth=0.2,
+                alpha=None if alpha is None else float(alpha[idx]),
                 zorder=10,
             ))
             start += v

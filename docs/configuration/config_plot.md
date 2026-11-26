@@ -163,8 +163,9 @@ The posterior maps show cluster assignments in geographic space.
 | `plot_confounder`           | string  | `null`    | Confounder to overlay on the map as alpha shapes e.g. `family`. `null` = no overlay                         |
 | `confounder_overlap_only`   | bool    | `true`    | Only overlay confounder groups that contain objects shown in a cluster. `false` = overlay all groups        |
 | `labels`                    | string  | `all`     | Which objects to label: `all`, `in_cluster` or `none`                                                       |
-| `min_posterior_probability` | float   | `null`    | Minimum posterior probability for an object to appear in the cluster. `null` = show all objects             |
+| `min_posterior_probability` | float   | `null`    | Minimum mean membership (averaged over posterior samples) of an object in its main cluster for it to appear in that cluster. `null` = show all objects |
 | `per_cluster`               | boolean | `false`   | Generate one map per cluster instead of all clusters combined                                               |
+| `certainty_alpha`           | boolean | `false`   | Fade objects on line and pie maps by the share of posterior samples in which their membership in their main cluster is at least `min_posterior_probability` (0.5 if `null`) |
 | `line`                      | dict    | —         | Line map settings. Only relevant when `type` is `line`. See below                                           |
 | `idw`                       | dict    | —         | IDW map settings. Only relevant when `type` is `idw`. See below                                             |
 

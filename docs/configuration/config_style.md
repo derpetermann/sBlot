@@ -293,6 +293,7 @@ Controls the appearance of cluster assignments on the map.
 | `max_line_width`    | float         | `1`           | Maximum line width when `line_width` is `frequency`                                   |
 | `alpha`             | string\|float | `frequency`   | Opacity: `frequency` = scale by posterior probability, or fixed float e.g. `0.8`      |
 | `pie_radius_factor` | float         | `0.008`       | Base pie radius as a fraction of the minimum map spa. For `dot` map only.             |
+| `min_certainty_alpha` | float       | `0.15`        | Opacity of the least certain objects when `certainty_alpha` is enabled                |
 
 #### `map.graphics.confounders`
 Controls the appearance of confounder alpha shapes on the map.

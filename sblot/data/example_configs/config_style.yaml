@@ -323,6 +323,9 @@ map:
       # Only relevant for dot maps. Increase for larger pies, decrease
       # if pies overlap.
       pie_radius_factor: 0.008
+      # Opacity of the least certain objects when certainty_alpha is enabled
+      # in config_plot.yaml. Opacity scales linearly from this value to 1.
+      min_certainty_alpha: 0.15
 
     # Style settings for confounder group overlays shown as alpha shapes
     # (concave hulls) around objects belonging to the same group.
